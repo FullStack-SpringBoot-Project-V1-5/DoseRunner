@@ -53,11 +53,71 @@ Dev credentials are defaults only; override them with env vars or a local `.env`
 - Logs: readable text by default, JSON when the `prod` profile is active (compose sets it).
 - Errors: every REST error is an `ApiError` JSON body carrying the `traceId`.
 
-## REST endpoints
-_To be filled during the Day 2 contracts session (method · path · role · body)._
+## REST endpoints (frozen at `v0.1-contracts`)
 
-| Service | Method | Path | Role | Body |
-|---------|--------|------|------|------|
+Roles: `NURSE`, `PHARMACIST`, `OPERATOR`, `AUDITOR`, `ADMIN`. All routes except the `public` ones need
+`Authorization: Bearer <JWT>` issued by identity-service. Errors use the `ApiError` body.
+Istio routes the gateway by prefix: `/auth`, `/admin` → identity · `/orders`, `/pharmacy`, `/formulary` → order ·
+`/fleet` → dispatch · `/custody` → custody.
+
+### identity-service (A) — 8081
+| Method | Path | Role | Body → Response |
+|---|---|---|---|
+| POST | `/auth/login` | public | `{username, password}` → `{accessToken, tokenType, expiresIn}` |
+| GET | `/.well-known/jwks.json` | public | → JWKS (RS256 public key) |
+| GET | `/auth/me` | any | → `{id, username, roles[]}` |
+| GET | `/admin/users` | ADMIN | → `[{id, username, roles[], enabled}]` |
+| POST | `/admin/users` | ADMIN | `{username, password, roles[]}` → 201 user |
+| PUT | `/admin/users/{id}/roles` | ADMIN | `{roles[]}` → user |
+| PATCH | `/admin/users/{id}` | ADMIN | `{enabled}` → user |
+
+### order-service (B) — 8082
+| Method | Path | Role | Body → Response |
+|---|---|---|---|
+| POST | `/orders` | NURSE | `{patientRef, drugCode, qty, ward, room?}` → 201 order (status `PLACED`) · 409 if not enough stock |
+| GET | `/orders/{id}` | NURSE, PHARMACIST, AUDITOR | → order + status + ETA |
+| GET | `/orders?status=&ward=` | NURSE, PHARMACIST | → page of orders |
+| POST | `/orders/{id}/delivery` | NURSE | `{robotId}` → 200, publishes `DeliveryConfirmed` |
+| GET | `/pharmacy/queue` | PHARMACIST | → orders in `PLACED` |
+| POST | `/pharmacy/orders/{id}/validate` | PHARMACIST | → 200 (`VALIDATED`), publishes `OrderValidated` + schedules `DispatchTimedOut` |
+| POST | `/pharmacy/orders/{id}/reject` | PHARMACIST | `{reason}` → 200 (`REJECTED`), stock released |
+| POST | `/pharmacy/orders/{id}/pickup` | PHARMACIST | `{robotId}` → 200, publishes `PickupConfirmed` |
+| GET | `/formulary` | any | → drugs (cached) |
+| GET | `/formulary/{code}` | any | → drug (cached) |
+| PUT | `/formulary/{code}` | PHARMACIST | `{name, form, controlled}` → drug, evicts the cache |
+| GET | `/pharmacy/stock` | PHARMACIST | → `[{drugCode, available, reserved}]` |
+
+Order status: `PLACED → VALIDATED → ASSIGNED → PICKED_UP → COMPLETED`, plus `REJECTED`, `MANUAL_DELIVERY`.
+
+### dispatch-service (C) — 8083 (+ gRPC 9090)
+| Method | Path | Role | Body → Response |
+|---|---|---|---|
+| GET | `/fleet/robots` | OPERATOR, PHARMACIST | → `[{robotId, x, y, battery, status}]` |
+| GET | `/fleet/robots/{id}` | OPERATOR | → robot + current mission |
+| GET | `/fleet/missions?status=` | OPERATOR | → missions |
+| GET | `/fleet/missions/{id}` | OPERATOR, AUDITOR | → mission + path |
+| POST | `/fleet/missions/{id}/abort` | OPERATOR | `{reason}` → 200, publishes `MissionAborted` |
+| GET | `/fleet/dlq` | OPERATOR | → messages currently in the DLQ |
+| GET | `/fleet/strategy` | OPERATOR | → `{name, version}` of the active `DispatchStrategy` |
+| gRPC | `FleetService/GetEta` | order-service SA | `EtaRequest` → `EtaReply` |
+| gRPC | `FleetService/ReserveRobot` | order-service SA | `ReserveRequest` → `ReserveReply` |
+
+### custody-service (D) — 8084
+| Method | Path | Role | Body → Response |
+|---|---|---|---|
+| GET | `/custody/orders/{orderId}` | AUDITOR, PHARMACIST | → chain `[{seq, type, actorId, robotId, ts, payloadHash, prevHash, signature}]` |
+| GET | `/custody/orders/{orderId}/verify` | AUDITOR | → `{valid, links, brokenAtSeq?, reason?}` |
+| GET | `/custody/public-key` | AUDITOR | → Ed25519 public key (base64), for offline verification |
+
+There is **no write endpoint**: ledger links are created only from Artemis events (ADR 0001 §12).
+
+### MVC pages (Thymeleaf)
+`/login`, `/admin/users` (identity) · `/ui/orders/new`, `/ui/orders/{id}`, `/ui/pharmacy/queue` (order) ·
+`/ui/fleet` (dispatch) · `/ui/audit/{orderId}` (custody).
+
+## Messaging
+Artemis addresses, queues and message properties are locked: see [deploy/artemis/README.md](deploy/artemis/README.md)
+and [contracts/src/main/avro/README.md](contracts/src/main/avro/README.md).
 
 ## Docs
 - [CONTRIBUTING.md](CONTRIBUTING.md) — branches, Conventional Commits, review rules, Definition of Done

@@ -1,0 +1,17 @@
+{
+  "type": "record",
+  "name": "OrderPlaced",
+  "namespace": "tn.rnu.eniso.doserunner.contracts.events",
+  "doc": "Producer: order-service, after stock was reserved in the same local transaction. Consumers: custody-service (opens the ledger), dashboards.",
+  "fields": [
+    { "name": "eventId", "type": "string", "doc": "UUID of this event. Consumers keep processed ids to drop duplicates (Artemis delivery is at-least-once)." },
+    { "name": "occurredAt", "type": { "type": "long", "logicalType": "timestamp-millis" }, "doc": "When the fact happened (UTC)." },
+    { "name": "orderId", "type": "string", "doc": "Saga correlation key." },
+    { "name": "patientRef", "type": "string", "doc": "Pseudonymised patient reference (never a name)." },
+    { "name": "drugCode", "type": "string", "doc": "Formulary code." },
+    { "name": "qty", "type": "int", "doc": "Number of units, > 0." },
+    { "name": "wardLocation", "type": "tn.rnu.eniso.doserunner.contracts.common.Location", "doc": "Delivery destination." },
+    { "name": "controlled", "type": "boolean", "doc": "True for controlled substances (opioids...): custody signatures are mandatory." },
+    { "name": "nurseId", "type": "string", "doc": "identity-service user id of the ordering nurse." }
+  ]
+}

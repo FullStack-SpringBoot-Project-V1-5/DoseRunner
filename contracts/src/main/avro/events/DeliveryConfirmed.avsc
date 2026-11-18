@@ -1,0 +1,13 @@
+{
+  "type": "record",
+  "name": "DeliveryConfirmed",
+  "namespace": "tn.rnu.eniso.doserunner.contracts.events",
+  "doc": "Producer: order-service, when the nurse scans at the ward. Consumers: custody-service signs link #2 (robot -> nurse); dispatch-service closes the mission.",
+  "fields": [
+    { "name": "eventId", "type": "string", "doc": "UUID of this event. Consumers keep processed ids to drop duplicates (Artemis delivery is at-least-once)." },
+    { "name": "occurredAt", "type": { "type": "long", "logicalType": "timestamp-millis" }, "doc": "When the fact happened (UTC)." },
+    { "name": "orderId", "type": "string", "doc": "Saga correlation key." },
+    { "name": "robotId", "type": "string" },
+    { "name": "nurseId", "type": "string" }
+  ]
+}

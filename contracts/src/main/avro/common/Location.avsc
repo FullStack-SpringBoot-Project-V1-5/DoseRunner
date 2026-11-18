@@ -1,0 +1,11 @@
+{
+  "type": "record",
+  "name": "Location",
+  "namespace": "tn.rnu.eniso.doserunner.contracts.common",
+  "doc": "A place in the hospital: human-readable ward/room + the grid cell the robot drives to.",
+  "fields": [
+    { "name": "ward", "type": "string", "doc": "Ward code, e.g. 'CARDIO-2' or 'PHARMACY'." },
+    { "name": "room", "type": ["null", "string"], "default": null, "doc": "Room number; null for ward-level drop points and the pharmacy." },
+    { "name": "point", "type": "GridPoint", "doc": "Grid cell of the drop point." }
+  ]
+}

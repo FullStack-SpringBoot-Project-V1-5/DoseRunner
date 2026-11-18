@@ -1,0 +1,19 @@
+{
+  "type": "record",
+  "name": "MissionAborted",
+  "namespace": "tn.rnu.eniso.doserunner.contracts.events",
+  "doc": "Producer: dispatch-service (robot fault, battery, operator). Consumers: custody-service signs an ABORT link; order-service; dispatch-service re-assigns (max 2) else MANUAL_DELIVERY.",
+  "fields": [
+    { "name": "eventId", "type": "string", "doc": "UUID of this event. Consumers keep processed ids to drop duplicates (Artemis delivery is at-least-once)." },
+    { "name": "occurredAt", "type": { "type": "long", "logicalType": "timestamp-millis" }, "doc": "When the fact happened (UTC)." },
+    { "name": "orderId", "type": "string", "doc": "Saga correlation key." },
+    { "name": "robotId", "type": "string" },
+    { "name": "missionId", "type": "string" },
+    { "name": "reason", "type": {
+        "type": "enum", "name": "AbortReason",
+        "doc": "Enum default makes adding a reason later a compatible change.",
+        "symbols": ["UNKNOWN", "ROBOT_FAULT", "LOW_BATTERY", "PATH_BLOCKED", "OPERATOR_CANCEL"],
+        "default": "UNKNOWN" } },
+    { "name": "detail", "type": ["null", "string"], "default": null, "doc": "Free text for the fleet board." }
+  ]
+}
