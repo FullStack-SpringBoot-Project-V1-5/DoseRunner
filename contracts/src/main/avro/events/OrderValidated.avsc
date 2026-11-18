@@ -1,0 +1,14 @@
+{
+  "type": "record",
+  "name": "OrderValidated",
+  "namespace": "tn.rnu.eniso.doserunner.contracts.events",
+  "doc": "Producer: order-service, when a pharmacist validates. Consumer: dispatch-service (picks a robot). Carries the destination so dispatch never has to call order-service back.",
+  "fields": [
+    { "name": "eventId", "type": "string", "doc": "UUID of this event. Consumers keep processed ids to drop duplicates (Artemis delivery is at-least-once)." },
+    { "name": "occurredAt", "type": { "type": "long", "logicalType": "timestamp-millis" }, "doc": "When the fact happened (UTC)." },
+    { "name": "orderId", "type": "string", "doc": "Saga correlation key." },
+    { "name": "pharmacistId", "type": "string", "doc": "identity-service user id of the validating pharmacist." },
+    { "name": "destination", "type": "tn.rnu.eniso.doserunner.contracts.common.Location", "doc": "Copy of OrderPlaced.wardLocation." },
+    { "name": "controlled", "type": "boolean", "doc": "Copy of OrderPlaced.controlled (a strategy may require a locked compartment)." }
+  ]
+}

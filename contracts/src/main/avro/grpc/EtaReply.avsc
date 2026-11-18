@@ -1,0 +1,12 @@
+{
+  "type": "record",
+  "name": "EtaReply",
+  "namespace": "tn.rnu.eniso.doserunner.contracts.grpc",
+  "doc": "available=false means no idle robot right now; the UI shows 'ETA unknown, queued' (same as the circuit-breaker fallback).",
+  "fields": [
+    { "name": "order", "type": "tn.rnu.eniso.doserunner.contracts.common.OrderRef" },
+    { "name": "available", "type": "boolean" },
+    { "name": "etaSeconds", "type": ["null", "int"], "default": null, "doc": "Null when available=false." },
+    { "name": "robot", "type": ["null", "tn.rnu.eniso.doserunner.contracts.common.RobotRef"], "default": null, "doc": "Robot the strategy would pick now (not reserved)." }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "type": "record",
+  "name": "RobotTelemetry",
+  "namespace": "tn.rnu.eniso.doserunner.contracts.robot",
+  "doc": "VERSION 1 (frozen at v0.1-contracts). Producer: robots (robot-sim, ros-bridge) on multicast address robot.telemetry. Consumer: dispatch-service. Week 2 (B): v2 adds 'status' (enum with default) and 'temperatureC' ([\"null\",\"double\"], default null) — the schema-evolution demo; v1 writers must keep working.",
+  "fields": [
+    { "name": "robotId", "type": "string" },
+    { "name": "x", "type": "int" },
+    { "name": "y", "type": "int" },
+    { "name": "battery", "type": "int", "doc": "Battery level in percent, 0..100." }
+  ]
+}
