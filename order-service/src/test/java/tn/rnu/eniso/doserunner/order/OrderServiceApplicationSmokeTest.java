@@ -3,6 +3,7 @@ package tn.rnu.eniso.doserunner.order;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
+import tn.rnu.eniso.doserunner.order.support.ContainersSupport;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -11,9 +12,8 @@ import java.net.http.HttpResponse;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Boots the whole service and checks it is healthy and wired to commons (trace id echoed). */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class OrderServiceApplicationSmokeTest {
+class OrderServiceApplicationSmokeTest extends ContainersSupport {
 
     @Value("${local.server.port}")
     int port;
