@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{ui/fragments :: head('New order')}"></head>
+<body>
+<header th:replace="~{ui/fragments :: nav}"></header>
+<main>
+    <h1>New medication order</h1>
+    <form class="card" th:action="@{/ui/orders/new}" th:object="${form}" method="post">
+        <div class="flash error" th:if="${#fields.hasGlobalErrors()}">
+            <p th:each="err : ${#fields.globalErrors()}" th:text="${err}">Order rejected.</p>
+        </div>
+
+        <label for="patientRef">Patient reference</label>
+        <input id="patientRef" type="text" th:field="*{patientRef}" placeholder="P-0042" maxlength="64" required>
+        <p class="field-error" th:if="${#fields.hasErrors('patientRef')}" th:errors="*{patientRef}"></p>
+
+        <label for="drugCode">Drug</label>
+        <select id="drugCode" th:field="*{drugCode}" required>
+            <option value="">Select a drug</option>
+            <option th:each="drug : ${drugs}" th:value="${drug.code}"
+                    th:text="${drug.name} + ' (' + ${drug.form} + ')' + (${drug.controlled} ? ' · controlled' : '')">
+                Paracetamol 500 mg
+            </option>
+        </select>
+        <p class="field-error" th:if="${#fields.hasErrors('drugCode')}" th:errors="*{drugCode}"></p>
+
+        <label for="qty">Quantity</label>
+        <input id="qty" type="number" min="1" max="100" th:field="*{qty}" required>
+        <p class="field-error" th:if="${#fields.hasErrors('qty')}" th:errors="*{qty}"></p>
+
+        <div class="row">
+            <div>
+                <label for="ward">Ward</label>
+                <select id="ward" th:field="*{ward}" required>
+                    <option value="">Select a ward</option>
+                    <option th:each="ward : ${wards}" th:value="${ward.code}"
+                            th:text="${ward.code} + ' · ' + ${ward.name}">CARDIO-2</option>
+                </select>
+                <p class="field-error" th:if="${#fields.hasErrors('ward')}" th:errors="*{ward}"></p>
+            </div>
+            <div>
+                <label for="room">Room</label>
+                <input id="room" type="text" th:field="*{room}" placeholder="214" maxlength="16">
+                <p class="field-error" th:if="${#fields.hasErrors('room')}" th:errors="*{room}"></p>
+            </div>
+        </div>
+
+        <button type="submit">Place order</button>
+    </form>
+</main>
+</body>
+</html>

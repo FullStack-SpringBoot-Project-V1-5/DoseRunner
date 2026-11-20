@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{ui/fragments :: head('Validation queue')}"></head>
+<body>
+<header th:replace="~{ui/fragments :: nav}"></header>
+<main>
+    <div th:replace="~{ui/fragments :: flash}"></div>
+    <h1>Validation queue</h1>
+    <p class="muted" th:if="${#lists.isEmpty(orders)}">No order is waiting for validation.</p>
+    <table class="queue" th:unless="${#lists.isEmpty(orders)}">
+        <thead>
+        <tr>
+            <th>Placed</th>
+            <th>Patient</th>
+            <th>Drug</th>
+            <th>Qty</th>
+            <th>Destination</th>
+            <th>Nurse</th>
+            <th>Decision</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="order : ${orders}" th:classappend="${order.controlled} ? 'is-controlled'">
+            <td th:text="${#temporals.format(order.createdAt, 'HH:mm:ss', 'UTC')}">10:15</td>
+            <td><a th:href="@{/ui/orders/{id}(id=${order.id})}" th:text="${order.patientRef}">P-0042</a></td>
+            <td>
+                <span th:text="${drugs[order.drugCode] != null ? drugs[order.drugCode].name : order.drugCode}">Morphine</span>
+                <span class="badge controlled" th:if="${order.controlled}">controlled</span>
+            </td>
+            <td th:text="${order.qty}">2</td>
+            <td th:text="${order.ward} + (${order.room} != null ? ' / ' + ${order.room} : '')">CARDIO-2</td>
+            <td th:text="${order.nurseId}">u-nurse</td>
+            <td class="actions">
+                <form th:action="@{/ui/pharmacy/orders/{id}/validate(id=${order.id})}" method="post">
+                    <button type="submit">Validate</button>
+                </form>
+                <form class="reject" th:action="@{/ui/pharmacy/orders/{id}/reject(id=${order.id})}" method="post">
+                    <input type="text" name="reason" placeholder="Reason" maxlength="512" required>
+                    <button type="submit" class="secondary">Reject</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+</body>
+</html>
