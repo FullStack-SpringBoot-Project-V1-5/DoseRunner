@@ -46,6 +46,11 @@ services:
 
   artemis:
     image: apache/activemq-artemis:2.44.0
+    entrypoint: ["/bin/bash", "/opt/doserunner/start-broker.sh"]
+    command: ["run"]
+    volumes:
+      - ../artemis/broker.xml:/var/lib/artemis-instance/etc-override/broker.xml:ro
+      - ../artemis/start-broker.sh:/opt/doserunner/start-broker.sh:ro
     environment:
       ARTEMIS_USER: ${ARTEMIS_USER:-artemis}
       ARTEMIS_PASSWORD: ${ARTEMIS_PASSWORD:-artemis}
