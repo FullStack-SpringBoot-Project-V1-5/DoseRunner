@@ -103,7 +103,7 @@
          <address name="doserunner.events">
             <multicast>
                <queue name="order-service"/>
-               <queue name="dispatch-service"/>
+               <queue name="dispatch-service"><filter string="eventType = 'OrderValidated'"/></queue>
                <queue name="custody-service"/>
             </multicast>
          </address>

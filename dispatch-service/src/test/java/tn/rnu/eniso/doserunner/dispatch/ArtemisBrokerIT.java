@@ -9,10 +9,8 @@ import org.apache.activemq.artemis.api.jms.management.JMSManagementHelper;
 import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.MountableFile;
 import tn.rnu.eniso.doserunner.contracts.messaging.Addresses;
 
 import static org.assertj.core.api.Assertions.*;
@@ -20,19 +18,7 @@ import static org.assertj.core.api.Assertions.*;
 @Testcontainers
 class ArtemisBrokerIT {
     @Container
-    static final GenericContainer<?> BROKER = new GenericContainer<>("apache/activemq-artemis:2.44.0")
-            .withEnv("ARTEMIS_USER", "c004")
-            .withEnv("ARTEMIS_PASSWORD", "c004-test-password")
-            .withEnv("ANONYMOUS_LOGIN", "false")
-            .withExposedPorts(61616)
-            .withCopyFileToContainer(MountableFile.forHostPath(System.getProperty("broker.configuration")),
-                    "/var/lib/artemis-instance/etc-override/broker.xml")
-            .withCopyFileToContainer(MountableFile.forHostPath(System.getProperty("broker.startup")),
-                    "/opt/doserunner/start-broker.sh")
-            .withCreateContainerCmdModifier(cmd -> cmd.withEntrypoint("/bin/bash", "/opt/doserunner/start-broker.sh"))
-            .withCommand("run")
-            .waitingFor(Wait.forLogMessage(".*AMQ221007: Server is now active.*", 1))
-            .withStartupTimeout(Duration.ofSeconds(90));
+    static final GenericContainer<?> BROKER = ArtemisTestBroker.create();
 
     private ActiveMQConnectionFactory factory() {
         return new ActiveMQConnectionFactory("tcp://" + BROKER.getHost() + ":" + BROKER.getMappedPort(61616)
@@ -51,6 +37,8 @@ class ArtemisBrokerIT {
                         Addresses.QUEUE_CUSTODY_SERVICE}) {
                     assertBinding(session, queue, Addresses.EVENTS, "MULTICAST");
                 }
+                assertThat(management(session, "queue." + Addresses.QUEUE_DISPATCH_SERVICE, "filter"))
+                        .isEqualTo("eventType = 'OrderValidated'");
                 assertBinding(session, Addresses.QUEUE_DISPATCH_TELEMETRY, Addresses.ROBOT_TELEMETRY, "MULTICAST");
                 assertBinding(session, Addresses.ROBOT_COMMANDS, Addresses.ROBOT_COMMANDS, "ANYCAST");
                 assertBinding(session, Addresses.DLQ, Addresses.DLQ, "ANYCAST");

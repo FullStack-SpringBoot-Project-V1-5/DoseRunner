@@ -71,3 +71,33 @@ Important: `JMSXGroupID` groups messages on a consumer for **ordering**; it does
 - Exact contracts for the RobotLink Java 11-generated class artifact.
 
 Week 1 goal is a demonstrable, tested vertical slice. Timeout sagas, native route A*, gRPC, full custody handoffs, Istio, and broker high availability are not authorized additions to this Week 1 implementation slice.
+
+## C005 approved implementation — 2026-11-22
+
+The previously open C005 decisions were explicitly resolved by Wassim. The
+pharmacy defaults to configurable (0,0); a replaceable Manhattan route walks X
+then Y at one cell/second. Paths include pharmacy, command waypoints omit it;
+robot-to-pharmacy travel is excluded. This is the approved Week 1 interpretation
+of the frozen schema's future libroute wording; schemas are unchanged.
+
+The presentation listener calls `OrderValidatedFacade`, which owns the database
+transaction and reuses C003 `DispatchFacade` unchanged. Durable receipt hashes,
+per-robot sequence counters and one immutable outbox pair per mission commit
+with the mission/BUSY update. A database-serialized `OutboxRelay` publishes via
+the JMS adapter and records completion. Scheduling invokes that facade; no
+transaction boundary is added to presentation or business objects.
+
+All C005 processing/relays acquire one database coordination row before the
+existing fleet-lock protocol. This is a deliberately serialized Week 1 design.
+The database and broker still have separate commits; stored payloads and stable
+Artemis duplicate IDs support retry, bounded by the finite duplicate cache.
+No exactly-once execution is claimed. C006 must deduplicate missionId/seq.
+No eligible robot rolls back and can reach DLQ even for a valid order; manual
+single-message replay is required after capacity returns. Synthetic compartment
+mappings are not controlled-medication enforcement.
+
+The repository queue filter now selects OrderValidated; the live queue is not
+changed. A separately authorized in-place rollout must preserve existing data.
+See dispatch-service/README.md for settings, failure windows, replay, tests and
+future C006/C009 dependencies. Earlier unresolved-item lists describe the
+pre-C005 baseline; these explicit decisions supersede them for this slice.

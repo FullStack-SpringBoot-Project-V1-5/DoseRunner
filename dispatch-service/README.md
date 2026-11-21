@@ -171,3 +171,133 @@ Concurrency tests hold a first transaction open and observe a second transaction
 actual PostgreSQL lock wait before allowing commit. They verify different orders
 choose different robots, a single eligible robot cannot serve both orders, and same-order
 requests return the same mission. Tests use only disposable Testcontainers databases.
+
+## C005 — OrderValidated and durable publication
+
+The listener consumes `doserunner.events::dispatch-service` with selector
+`eventType = 'OrderValidated'`. It uses the imported Avro single-object
+`BytesMessage` adapter, validates canonical UUID event/order identifiers and
+required fields, rejects conflicting orderId properties, preserves traceId or
+logs a generated replacement, and restores the previous MDC on success/failure.
+A local transacted JMS session acknowledges only after processing returns;
+exceptions roll back for the broker's configured three deliveries then DLQ.
+
+### Approved Week 1 behavior
+
+- Pharmacy is configurable, default `(0,0)`. `RoutePlanner` is replaceable;
+  `ManhattanRoutePlanner` walks X first, then Y without obstacle assumptions.
+- RobotAssigned.path includes both endpoints. MissionCommand.waypoints omits
+  the pharmacy; identical endpoints mean singleton path, empty waypoints, ETA 0.
+  ETA counts grid movements at one cell/second. Robot-to-pharmacy travel is excluded.
+- Coordinates must be nonnegative. A materialized route is limited to 10,000
+  movements to bound allocations from untrusted coordinates; this is not a map.
+- Each robot has a durable integer command sequence starting at 1. Allocation
+  rolls back with assignment; retries reuse the stored sequence. Exhaustion
+  fails explicitly rather than wrapping.
+- Synthetic compartment mappings R-01/R-02/R-03 -> C1 are demo identifiers only.
+  There is no controlled-medication compartment enforcement. Missing mappings fail.
+- No eligible robot is a processing failure: a temporarily busy fleet can send a
+  valid order to DLQ. Capacity returning does **not** automatically replay it.
+
+### Transactions and recovery
+
+V2 adds `dispatch_inbox`, `dispatch_command_sequence`, `dispatch_outbox` and a
+single coordination row. `OrderValidatedFacade` locks that row, invokes the
+unchanged C003 Spring facade inside READ_COMMITTED, and atomically commits:
+mission/BUSY state, event UUID and canonical payload hash, allocated sequence,
+and one immutable outgoing Avro pair per mission. Existing active C003 missions
+without an outbox pair receive their first pair; an existing pair is never
+replaced for another event ID. C003 terminal-history rules remain unchanged.
+Reusing an eventId with different payload is rejected. Receipt records are kept;
+no automatic retention/deletion policy is introduced.
+
+A database-serialized relay selects the oldest pending pair and publishes a
+persistent RobotAssigned topic message and MissionCommand queue message in one
+**local JMS transaction**, then marks the database row sent. Topic/queue routing
+is explicit. Both carry eventType/orderId/traceId; commands also carry robotId
+and JMSXGroupID=robotId. Grouping does not replace the robot consumer selector.
+
+Publication IDs, timestamps, bytes, and sequences are stored once. Stable
+`_AMQ_DUPL_ID` values are `dispatch:<mission UUID>:assigned` and `:command`.
+An Artemis duplicate-transaction rejection confirms the previously sent pair
+and allows the relay to complete its database record. Other failures propagate
+out of the relay transaction; the scheduler logs them and retries pending work.
+A new application context resumes pending rows without an in-memory queue.
+
+This is **not an atomic PostgreSQL/JMS transaction or exactly-once delivery**.
+A crash after broker commit but before database commit resends the same pair.
+Artemis duplicate suppression works only while those IDs remain in its finite,
+per-address cache; eviction/administrative clearing can permit duplicate delivery.
+C006 must deduplicate commands by missionId/seq. Broker redelivery is also possible.
+Do not clear the cache or generate replacement publication IDs during recovery.
+The cache must remain enabled and persisted for restart suppression; C004's stock
+cache settings are preserved. The C005 tests exercise duplicate suppression on
+2.44.0, not unlimited cache retention or broker HA.
+
+The global database lock deliberately serializes receipt and relay across
+instances, holds through broker I/O, and preserves committed sequence order.
+Default relay throughput is one pair per second, with head-of-line blocking on
+failure. Revisit this Week 1 design before scaling. Inbox/outbox/sequence rows
+must not be manually reset to replay work. The upstream order-service's existing
+after-commit event-loss window remains outside C005.
+
+### Runtime configuration
+
+External Artemis is required; native mode uses `SPRING_ARTEMIS_BROKER_URL`,
+`SPRING_ARTEMIS_USER`, `SPRING_ARTEMIS_PASSWORD` (local defaults tcp://localhost:61616,
+artemis/artemis). Existing broker auth files remain authoritative.
+`DISPATCH_PHARMACY_X` and `DISPATCH_PHARMACY_Y` override `(0,0)`.
+`dispatch.messaging.compartments` is a map of robot IDs to compartment codes,
+replaceable using Spring configuration. `dispatch.messaging.relay-delay-ms`
+defaults to 1000. Listener/relay can be disabled separately with
+`dispatch.messaging.listener-enabled=false` / `relay-enabled=false` for maintenance
+or isolated database tests. Disabling the relay leaves pending rows durable.
+
+### Safe manual replay after no eligible robot
+
+1. Confirm capacity is now eligible and fix the original processing cause. Inspect
+   the one DLQ message, its order/event UUIDs, trace, Avro body and original queue.
+   It must be an OrderValidated from `doserunner.events::dispatch-service`.
+2. Inspect the corresponding mission/inbox/outbox state read-only. If work is
+   already staged, let the outbox relay recover it; do not create another command.
+3. In the broker management console invoke DLQ QueueControl **retryMessage** with
+   that one broker message ID. It retries to its original queue. Preserve the
+   original eventId/body/properties. Do not use bulk retry, purge, or edit DB state.
+4. Observe the same trace/order in dispatch, one mission and one publication pair.
+   A still-unavailable fleet can exhaust three attempts and return to DLQ again.
+
+Malformed/conflicting events require investigation, not blind replay. This task
+has not operated on live workflow queues. Management retry API reference:
+https://artemis.apache.org/components/artemis/documentation/javadocs/javadoc-latest/org/apache/activemq/artemis/api/core/management/QueueControl.html#retryMessage(long)
+
+### Broker filter rollout
+
+The repository XML now filters only the dispatch event queue; all other C004
+bindings, telemetry correction, persistence, security and retry settings remain.
+Disposable-broker tests verify the filter and that unrelated events still reach
+other services. This does not retroactively remove previously queued events.
+
+The existing persistent broker was **not modified or restarted**. Before a later
+operator-authorized rollout, back up the instance/configuration, record queue
+identity/count/filter and stop dispatch consumers. Apply the dispatch queue
+filter in place using the running version's supported queue-update management
+operation and install the matching XML for subsequent starts. Verify the filter
+and retained queue/message counts. Never delete/recreate/purge the queue; if that
+broker version cannot update the filter in place, stop and plan a preserving
+migration separately. Previously accumulated unrelated messages need a separate
+reviewed disposition; do not add a catch-all consumer that acknowledges them.
+Future dispatch event types require an explicit filter expansion.
+
+### Verification boundary
+
+Focused tests: ManhattanRoutePlannerTest, OrderValidatedListenerTest,
+DispatchEventPublisherTest, DispatchMessagingIT and ArtemisBrokerIT. They cover
+routes, MDC, real Avro delivery/headers, duplicate receipts and publication,
+concurrency, sequence persistence/exhaustion, missing mappings, database rollback,
+JMS second-send rollback, pending recovery in a second application context,
+database commit failure after broker commit, malformed input and exact listener
+attempt counts 1/2/3 before DLQ, and queue filtering. Tests use only disposable
+PostgreSQL/Artemis containers and the project broker fixture.
+
+C006 movement/execution deduplication and C009 broader fault/architecture coverage
+remain separate. No hosted CI, live queue update, ROS integration or HA is claimed.

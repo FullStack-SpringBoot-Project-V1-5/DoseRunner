@@ -103,3 +103,17 @@ Sources: [address model](https://artemis.apache.org/components/artemis/documenta
 [redelivery](https://artemis.apache.org/components/artemis/documentation/latest/undelivered-messages).
 The exact image entrypoint was inspected locally; its override-copy behavior
 must be rechecked before changing the broker image version.
+
+## C005 dispatch event filter (repository configuration only)
+
+The `dispatch-service` queue now has `eventType = 'OrderValidated'`; the listener
+retains the same selector. Other queues, telemetry correction and C004 settings
+are unchanged. Disposable Artemis tests verify the actual queue filter, preserve
+other services' event routing and exercise listener retry/DLQ behavior.
+
+No running persistent queue was changed. Existing-instance rollout requires a
+separately authorized in-place filter update plus matching XML, with queue identity
+and retained messages verified. A restart/XML edit alone is not claimed to update
+an existing queue's filter. Do not delete, recreate or purge queues. The filter does
+not remove old unmatched messages. See dispatch-service/README.md for the rollout,
+manual single-message DLQ replay, outbox recovery and finite duplicate-cache limits.

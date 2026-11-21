@@ -26,7 +26,8 @@ class FleetPersistenceTest extends PostgresTestSupport {
 
     @Test
     void freshMigrationSeedsExactlyThreeRobotsAndDoesNotReseedOnRestart() {
-        assertThat(flyway.info().current().getVersion().toString()).isEqualTo("1");
+        assertThat(flyway.info().applied()).extracting(info -> info.getVersion().toString())
+                .containsExactly("1", "2");
         assertThat(robots.findAll()).extracting(Robot::getId)
                 .containsExactlyInAnyOrder("R-01", "R-02", "R-03");
         assertThat(robots.findAll()).allSatisfy(robot -> {
