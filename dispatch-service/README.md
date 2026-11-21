@@ -1,4 +1,4 @@
-# Dispatch service — C001/C002
+# Dispatch service — C001/C002/C003
 
 Flyway creates `robots` and `missions` in the fleet PostgreSQL database; Hibernate
 validates the mappings (`ddl-auto: validate`). Local defaults are
@@ -19,8 +19,8 @@ The local model was explicitly approved by Wassim during C001 on 2026-11-21:
 - Mission: caller-supplied UUID id and orderId, required robot reference,
   status ASSIGNED/COMPLETED/ABORTED. No cascade removal of robots or missions.
 - These statuses are persistence vocabulary, not additions to the frozen Avro
-  schemas. Transition rules, route/command fields, assignment concurrency and
-  event deduplication remain for their owning features. There is no unique
+  schemas. General transition rules, route/command fields and event
+  deduplication remain for their owning features. There is no unique
   order constraint: future reassignment may create another mission for an order.
 
 Entities and Spring Data repositories live in `dao`, per its existing package
@@ -102,8 +102,72 @@ rtk proxy ./mvnw -B -ntp -Dmaven.repo.local=/tmp/doserunner-maven/repository \
   -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=PackagedDispatchStrategyIT verify
 ```
 
-C002 does not wire a facade, reserve robots, persist assignments, publish events,
-or implement the optional v2 plugin. C003 must supply current snapshots, the
-actual pharmacy point and a concurrency policy within its transaction. The
+C002 itself only selects robots. The C003 facade below supplies current snapshots
+and transactional assignment; its caller supplies the actual pharmacy point. The
 `OrderValidated.controlled` field remains unchanged; additional compartment
 eligibility rules have not been specified or implemented by this v1 selector.
+
+
+## Transactional mission assignment — C003
+
+Wassim approved these rules on 2026-11-21. The Spring-managed
+`facade.DispatchFacade.assignMission(UUID orderId, int pickupX, int pickupY)`
+returns `Optional<Mission>`:
+
+- If an ASSIGNED mission already exists for the order, return it without another
+  assignment, even if the supplied pickup differs or no robot is now eligible.
+- If history contains only COMPLETED/ABORTED missions, throw `IllegalStateException`;
+  implicit reassignment is forbidden. Future explicit reassignment is not implemented.
+- With no history, select using the C002 rules, create a random UUID mission with
+  status ASSIGNED and set the selected robot BUSY in the same local transaction.
+- No eligible robot returns `Optional.empty()` without writes; a later request can retry.
+- Null order IDs and negative pickup coordinates fail before repository access.
+
+The public facade method owns the READ_COMMITTED transaction. It locks **all robot
+rows**, including BUSY/OFFLINE robots, using PESSIMISTIC_WRITE in database ID order.
+After acquiring locks it refreshes managed robot state, then checks mission history
+and invokes the strategy. Refresh prevents cached entities in an existing calling
+transaction from supplying stale candidates; callers must not pass pending robot
+edits into assignment, since refresh discards unflushed entity changes. Locks remain
+held until transaction completion (the caller's completion when joining a transaction).
+Call the Spring proxy, not a manually constructed instance, for transaction guarantees.
+An enclosing transaction must use READ_COMMITTED as well.
+
+This serializes assignments across dispatch instances sharing PostgreSQL. A waiting
+request sees the committed BUSY robot and the newly committed mission before making
+its decision. Consistent lock order reduces deadlocks between assignment calls.
+**Trade-off:** unrelated orders wait for each other; throughput is bounded by one
+full-fleet assignment transaction at a time. This is approved for the small Week 1
+fleet; revisit reservation/locking design before scaling. Robot provisioning/deletion
+must not race assignment; row locks do not lock absent rows or prevent new fleet rows.
+There is no schema migration, global UNIQUE(order_id), or database constraint enforcing
+this protocol: all assignment writers must go through this facade. Existing historical
+missions remain permitted. General mission transitions are outside C003.
+
+The facade orchestrates BO selection and DAO persistence; no presentation adapter
+exists yet. `config.DispatchConfiguration` discovers the approved v1 provider through
+ServiceLoader and exposes it as the strategy bean. No dependency was added. Frozen
+Avro schemas, REST contracts, and other services are unchanged.
+
+Order-level repeat handling here is **not durable eventId deduplication**. C005 must
+implement the frozen delivery-deduplication semantics and resolve database/message
+publication consistency; C003 has no JMS listener, publisher, outbox, route or ETA.
+The returned entity is a local model, not a wire DTO; lazy robot fields require an
+active persistence context (its ID is available for identifying the assignment).
+
+Focused verification, with the Java/Maven environment above and Docker access:
+
+```sh
+rtk proxy ./mvnw -B -ntp -Dmaven.repo.local=/tmp/doserunner-maven/repository \
+  -pl dispatch-service -am -Dtest=DispatchFacadeTest,DispatchAssignmentTest \
+  -Dsurefire.failIfNoSpecifiedTests=false test
+```
+
+Unit tests cover orchestration, validation, repeat/terminal history and non-assignment.
+PostgreSQL tests cover persisted selection, retry after unavailability, duplicate and
+terminal requests, cached-state refresh, and a deferred trigger that verifies BUSY
+was flushed before raising a commit failure: neither write survives rollback.
+Concurrency tests hold a first transaction open and observe a second transaction's
+actual PostgreSQL lock wait before allowing commit. They verify different orders
+choose different robots, a single eligible robot cannot serve both orders, and same-order
+requests return the same mission. Tests use only disposable Testcontainers databases.
