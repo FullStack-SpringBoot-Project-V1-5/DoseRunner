@@ -13,7 +13,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /** Boots the whole service and checks it is healthy and wired to commons (trace id echoed). */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class DispatchServiceApplicationSmokeTest {
+class DispatchServiceApplicationSmokeTest extends PostgresTestSupport {
 
     @Value("${local.server.port}")
     int port;

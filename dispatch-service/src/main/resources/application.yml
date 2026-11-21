@@ -1,6 +1,14 @@
 spring:
   application:
     name: dispatch-service
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/fleet}
+    username: ${SPRING_DATASOURCE_USERNAME:fleet}
+    password: ${SPRING_DATASOURCE_PASSWORD:fleet}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
 
 server:
   port: ${SERVER_PORT:8083}
