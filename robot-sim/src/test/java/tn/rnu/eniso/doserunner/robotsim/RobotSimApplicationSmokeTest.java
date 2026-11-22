@@ -1,6 +1,8 @@
 package tn.rnu.eniso.doserunner.robotsim;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import tn.rnu.eniso.doserunner.robotsim.facade.SimulationFleet;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -12,11 +14,25 @@ import java.net.http.HttpResponse;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /** Boots the whole service and checks it is healthy and wired to commons (trace id echoed). */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = {"sim.listener-enabled=false", "sim.scheduling-enabled=false", "management.health.jms.enabled=false",
+                "management.endpoint.health.group.readiness.include=readinessState",
+                "SIM_PHARMACY_X=5", "SIM_PHARMACY_Y=7"})
 class RobotSimApplicationSmokeTest {
 
     @Value("${local.server.port}")
     int port;
+
+    @Autowired
+    SimulationFleet fleet;
+
+    @Test
+    void pharmacyEnvironmentPropertiesBindThroughApplicationConfiguration() {
+        for (String id : java.util.List.of("R-01", "R-02", "R-03")) {
+            assertThat(fleet.snapshot(id).x()).isEqualTo(5);
+            assertThat(fleet.snapshot(id).y()).isEqualTo(7);
+        }
+    }
 
     @Test
     void healthIsUpAndTraceIdIsEchoed() throws Exception {

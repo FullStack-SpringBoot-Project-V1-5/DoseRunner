@@ -95,6 +95,8 @@ services:
     environment:
       <<: *service-env
       SERVER_PORT: 8083
+      DISPATCH_PHARMACY_X: ${DISPATCH_PHARMACY_X:-0}
+      DISPATCH_PHARMACY_Y: ${DISPATCH_PHARMACY_Y:-0}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/fleet
       SPRING_DATASOURCE_USERNAME: fleet
       SPRING_DATASOURCE_PASSWORD: ${FLEET_DB_PASSWORD:-fleet}
@@ -112,7 +114,19 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${CUSTODY_DB_PASSWORD:-custody}
     ports: ["8084:8084"]
 
-  # robot-sim (owner C) joins this file during days 3-7, once it consumes robot.commands.
+  robot-sim:
+    <<: *service
+    build: { context: ../.., dockerfile: deploy/compose/Dockerfile, args: { MODULE: robot-sim } }
+    image: doserunner/robot-sim:dev
+    depends_on:
+      artemis:
+        condition: service_healthy
+    environment:
+      <<: *service-env
+      SERVER_PORT: 8085
+      SIM_PHARMACY_X: ${DISPATCH_PHARMACY_X:-0}
+      SIM_PHARMACY_Y: ${DISPATCH_PHARMACY_Y:-0}
+    ports: ["8085:8085"]
 
 volumes:
   pgdata:
