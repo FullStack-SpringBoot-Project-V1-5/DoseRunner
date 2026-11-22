@@ -27,6 +27,7 @@
     <modules>
         <module>contracts</module>
         <module>commons</module>
+        <module>test-support</module>
         <module>commons-native</module>
         <module>identity-service</module>
         <module>order-service</module>
@@ -63,6 +64,11 @@
             <dependency>
                 <groupId>tn.rnu.eniso.doserunner</groupId>
                 <artifactId>commons</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>tn.rnu.eniso.doserunner</groupId>
+                <artifactId>test-support</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
