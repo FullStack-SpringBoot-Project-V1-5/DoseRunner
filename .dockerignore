@@ -5,3 +5,8 @@
 **/*.iml
 ros-bridge/
 docs/
+.claude/
+# never bake signing keys into an image; native artefacts are rebuilt inside the image
+**/secrets/
+native/*.so
+native/test_route

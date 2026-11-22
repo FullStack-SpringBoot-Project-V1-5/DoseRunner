@@ -13,6 +13,11 @@
     <name>DoseRunner :: commons-native</name>
     <description>FFM (Java 22+) bindings: libsodium (Ed25519, generichash) + libroute (A* in C) with upcall (owner: D).</description>
 
+    <properties>
+        <!-- FFM downcalls are "restricted": allow them for the unnamed module (otherwise a warning on every JVM). -->
+        <argLine>--enable-native-access=ALL-UNNAMED</argLine>
+    </properties>
+
     <dependencies>
 
         <dependency>

@@ -1,0 +1,56 @@
+# syntax=docker/dockerfile:1
+# Image for the services that call native code through FFM: custody-service (libsodium) and, once it uses
+# libroute, dispatch-service. Same layout as ./Dockerfile plus libsodium23, libroute.so and the native-access flag.
+#
+#   docker build --build-arg MODULE=custody-service -f deploy/compose/Dockerfile.native .
+#
+# Day-3 gate: Java 25 + libsodium23 + one FFM call. Must print "sodium_init() = 0":
+#   docker build -f deploy/compose/Dockerfile.native --target ffm-smoke -t doserunner/ffm-smoke .
+#   docker run --rm doserunner/ffm-smoke
+
+ARG JRE_IMAGE=eclipse-temurin:25.0.5_8-jre
+
+# --- libroute.so: compiled on the same Ubuntu release as the JRE image (24.04, same glibc), C tests must pass
+FROM ubuntu:24.04 AS native
+RUN apt-get update && apt-get install -y --no-install-recommends gcc libc6-dev make && rm -rf /var/lib/apt/lists/*
+WORKDIR /native
+COPY native/ .
+RUN make clean all test
+
+# --- commons-native only (fast): what the ffm-smoke target needs
+FROM maven:3.9.16-eclipse-temurin-25 AS build-commons-native
+WORKDIR /src
+COPY . .
+RUN --mount=type=cache,target=/root/.m2,sharing=locked \
+    mvn -B -ntp -pl commons-native -am package -DskipTests \
+ && cp commons-native/target/commons-native-*.jar /commons-native.jar
+
+# --- the service jar
+FROM maven:3.9.16-eclipse-temurin-25 AS build
+WORKDIR /src
+COPY . .
+ARG MODULE=custody-service
+RUN --mount=type=cache,target=/root/.m2,sharing=locked \
+    mvn -B -ntp -pl ${MODULE} -am package -DskipTests \
+ && cp ${MODULE}/target/${MODULE}-*.jar /app.jar
+
+# --- Day-3 gate: java + libsodium23 + SodiumInitCheck, nothing else
+FROM ${JRE_IMAGE} AS ffm-smoke
+RUN apt-get update && apt-get install -y --no-install-recommends libsodium23 && rm -rf /var/lib/apt/lists/*
+COPY --from=build-commons-native /commons-native.jar /app/commons-native.jar
+ENTRYPOINT ["java", "--enable-native-access=ALL-UNNAMED", "-cp", "/app/commons-native.jar", \
+            "tn.rnu.eniso.doserunner.nativelib.SodiumInitCheck"]
+
+# --- runtime (default target)
+FROM ${JRE_IMAGE}
+# curl: compose/k8s healthchecks · libsodium23: Ed25519 + BLAKE2b via FFM
+RUN apt-get update && apt-get install -y --no-install-recommends curl libsodium23 && rm -rf /var/lib/apt/lists/* \
+ && groupadd --system app && useradd --system --gid app --no-create-home app \
+ && mkdir -p /app/secrets && chown app:app /app/secrets && chmod 700 /app/secrets
+COPY --from=native /native/libroute.so /usr/local/lib/libroute.so
+RUN ldconfig
+WORKDIR /app
+COPY --from=build /app.jar /app/app.jar
+USER app
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75"
+ENTRYPOINT ["java", "--enable-native-access=ALL-UNNAMED", "-jar", "/app/app.jar"]

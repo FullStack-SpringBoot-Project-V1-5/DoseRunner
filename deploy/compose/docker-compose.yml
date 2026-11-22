@@ -97,7 +97,8 @@ services:
 
   custody-service:
     <<: *service
-    build: { context: ../.., dockerfile: deploy/compose/Dockerfile, args: { MODULE: custody-service } }
+    # FFM image: libsodium23 + libroute.so + --enable-native-access
+    build: { context: ../.., dockerfile: deploy/compose/Dockerfile.native, args: { MODULE: custody-service } }
     image: doserunner/custody-service:dev
     environment:
       <<: *service-env
@@ -105,9 +106,13 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/custody
       SPRING_DATASOURCE_USERNAME: custody
       SPRING_DATASOURCE_PASSWORD: ${CUSTODY_DB_PASSWORD:-custody}
+      CUSTODY_SIGNING_KEY_FILE: /app/secrets/custody-ed25519.sk
+    volumes:
+      - custody-keys:/app/secrets   # the Ed25519 key must survive container re-creation, or old chains stop verifying
     ports: ["8084:8084"]
 
   # robot-sim (owner C) joins this file during days 3-7, once it consumes robot.commands.
 
 volumes:
   pgdata:
+  custody-keys:
