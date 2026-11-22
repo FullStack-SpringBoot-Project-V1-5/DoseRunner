@@ -1,9 +1,27 @@
 spring:
   application:
     name: identity-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/identity    # compose: SPRING_DATASOURCE_URL
+    username: identity
+    password: identity                                # dev default, overridden by env in compose
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate                              # Flyway owns the schema
+  flyway:
+    locations: classpath:db/migration
 
 server:
   port: ${SERVER_PORT:8081}
+
+doserunner:
+  jwt:
+    private-key-location: file:./secrets/jwt-private.pem   # env DOSERUNNER_JWT_PRIVATEKEYLOCATION
+    ttl: 15m
+  security:
+    public-paths:
+      - /auth/login
 
 management:
   endpoints:
