@@ -130,3 +130,12 @@ interruption, waiting-mission cancellation and no further movement; transport is
 mocked for that deterministic shutdown test.
 It needs Docker access; it never uses development queues.
 No hosted CI, Compose image execution or cross-service I3 demo is claimed here.
+
+## Java 11 RobotLink handoff (C007)
+
+The separate [RobotLink build](robot-link/README.md) provides a Spring-free JMS API,
+Java 11 generated-contract jar, runnable example and isolated compatibility tests.
+It is not a dependency of this simulator or part of the root Maven reactor.
+Run its documented standalone verification in addition to root `verify`.
+Never run both executors for the same robot ID. Wassim owns the integration API;
+ROSJava integration remains pending under Knani's responsibility.

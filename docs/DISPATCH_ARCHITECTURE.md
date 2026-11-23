@@ -101,3 +101,30 @@ changed. A separately authorized in-place rollout must preserve existing data.
 See dispatch-service/README.md for settings, failure windows, replay, tests and
 future C006/C009 dependencies. Earlier unresolved-item lists describe the
 pre-C005 baseline; these explicit decisions supersede them for this slice.
+
+## C007 implementation and handoff — 2026-11-23
+
+The [standalone RobotLink build](../robot-sim/robot-link/README.md) lives at
+`robot-sim/robot-link/` and does not change the root reactor or Boot simulator.
+Wassim authorized a blocking, single-caller Jakarta JMS API after the live Week 1
+Notion page was checked and found to contain no method signatures or javax/jakarta
+requirement. Wassim subsequently established this API as the owner-approved
+integration contract; Knani confirmation is not a C007 gate. ROSJava integration
+remains pending under Knani's responsibility. Independent re-review APPROVED
+on 2026-11-23; [API v1](../robot-sim/robot-link/API.md) is frozen and C007 passed.
+
+Two artifacts compile with `--release 11`: the pure JMS client and generated robot
+contracts read directly from frozen schemas. Shared address/header/trust sources
+are reused unchanged. Generated Avro single-object APIs interoperate with the core
+codec. The separate parent pins the Java 11-compatible Artemis 2.38.0 client;
+the root's Java 17+ client and all broker settings remain unchanged.
+
+An exact robotId selector provides targeting. Each link owns one transacted command
+session and a separate transacted persistent telemetry publisher. The caller
+explicitly commits/rolls back a delivery and owns execution/replay protection;
+telemetry publication never acknowledges a command. A failed failure-path rollback
+closes the link to prevent reuse of an uncertain transaction; failed explicit
+command commit/rollback also retires the link. No durable acceptance,
+physical execution, exactly-once effects, automatic recovery or ROS node is added.
+The handoff README defines threading, failure windows, sample usage and Java 11
+runtime verification. Both standalone and root Maven verification are required.
