@@ -153,11 +153,17 @@ class DispatchMessagingIT {
     }
     @Test void rejectsInvalidPayloadsAndUnavailableFleetThroughRollbackAndDlq() throws Exception {
         for(int kind=0;kind<5;kind++) {
-            org.mockito.Mockito.clearInvocations(listener);
-            var attempts=new java.util.concurrent.CopyOnWriteArrayList<Integer>();
+            var attempts=new CopyOnWriteArrayList<Integer>();
+            var redelivered=new CopyOnWriteArrayList<Boolean>();
+            var entered=new Semaphore(0);
+            var failDelivery=new Semaphore(0);
             org.mockito.Mockito.doAnswer(call -> {
                 Message incoming=call.getArgument(0);
                 attempts.add(incoming.getIntProperty("JMSXDeliveryCount"));
+                redelivered.add(incoming.getJMSRedelivered());
+                // Hold the real listener before failure so the DLQ can be checked at every attempt.
+                entered.release();
+                assertThat(failDelivery.tryAcquire(10,TimeUnit.SECONDS)).isTrue();
                 return call.callRealMethod();
             }).when(listener).onMessage(org.mockito.ArgumentMatchers.any(Message.class));
             String probe=UUID.randomUUID().toString();
@@ -170,14 +176,41 @@ class DispatchMessagingIT {
                 else if(kind==1) m=s.createTextMessage("unsupported");
                 else { var event=OrderValidatedListenerTest.event(); if(kind==2) event.setOrderId("invalid-uuid");
                     m=messages.toMessage(s,event); if(kind==3) m.setStringProperty(MessageHeaders.ORDER_ID,"conflict"); }
-                m.setStringProperty(MessageHeaders.EVENT_TYPE,"OrderValidated"); m.setStringProperty("probeId",probe); p.send(m);
+                m.setStringProperty(MessageHeaders.EVENT_TYPE,"OrderValidated");
+                m.setStringProperty(MessageHeaders.TRACE_ID,"poison-trace-"+probe);
+                m.setJMSCorrelationID(probe);
+                m.setStringProperty("probeId",probe); p.send(m);
+                long failedAt=0;
+                for(int attempt=1;attempt<=3;attempt++) {
+                    assertThat(entered.tryAcquire(8,TimeUnit.SECONDS)).as("kind %s delivery %s",kind,attempt).isTrue();
+                    if(attempt>1) assertThat(System.nanoTime()-failedAt)
+                            .isGreaterThanOrEqualTo(Duration.ofMillis(attempt==2 ? 800 : 1600).toNanos());
+                    assertThat(attempts).hasSize(attempt);
+                    assertThat(dlq.receive(100)).as("DLQ before failure %s of kind %s",attempt,kind).isNull();
+                    failedAt=System.nanoTime();
+                    failDelivery.release();
+                }
                 var dead=dlq.receive(15000); assertThat(dead).as("poison kind %s",kind).isNotNull();
-                assertThat(dead.getStringProperty("_AMQ_ORIG_QUEUE")).isEqualTo("dispatch-service");
-                assertThat(dead.getIntProperty("JMSXDeliveryCount")).isGreaterThanOrEqualTo(1);
+                assertThat(dead.getStringProperty("_AMQ_ORIG_ADDRESS")).isEqualTo(Addresses.EVENTS);
+                assertThat(dead.getStringProperty("_AMQ_ORIG_QUEUE")).isEqualTo(Addresses.QUEUE_DISPATCH_SERVICE);
+                assertThat(dead.getStringProperty(MessageHeaders.TRACE_ID)).isEqualTo("poison-trace-"+probe);
+                assertThat(dead.getJMSCorrelationID()).isEqualTo(probe);
+                if(m instanceof BytesMessage bytes) {
+                    bytes.reset();
+                    assertThat(dead.getBody(byte[].class)).isEqualTo(bytes.getBody(byte[].class));
+                } else assertThat(dead.getBody(String.class)).isEqualTo("unsupported");
+                assertThat(entered.tryAcquire(2500,TimeUnit.MILLISECONDS)).as("no fourth delivery").isFalse();
+                assertThat(dlq.receive(250)).as("one dead letter only").isNull();
+                assertThat(attempts).containsExactly(1,2,3);
+                assertThat(redelivered).containsExactly(false,true,true);
+                System.out.println("C009 poison kind="+kind+": listener attempts 1/2/3, delayed retries, one DLQ copy, no fourth delivery");
+            } finally {
+                failDelivery.release(4);
+                org.mockito.Mockito.reset(listener);
             }
-            assertThat(attempts).containsExactly(1,2,3);
-            org.mockito.Mockito.reset(listener);
-            assertThat(count("missions")).isZero(); assertThat(count("dispatch_inbox")).isZero();
+            for(String table:new String[]{"missions","dispatch_inbox","dispatch_outbox","dispatch_command_sequence"})
+                assertThat(count(table)).as(table).isZero();
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM robots WHERE status='BUSY'",Integer.class)).isZero();
         }
     }
     @Test void newApplicationContextRecoversPendingAndRetainsSequenceAndInbox() throws Exception {

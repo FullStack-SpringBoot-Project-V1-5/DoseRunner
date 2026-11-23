@@ -8,6 +8,8 @@ import java.util.UUID;
 import org.apache.activemq.artemis.api.jms.management.JMSManagementHelper;
 import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -45,10 +47,7 @@ class ArtemisBrokerIT {
                 assertBinding(session, Addresses.EXPIRY_QUEUE, Addresses.EXPIRY_QUEUE, "ANYCAST");
                 for (String address : new String[]{Addresses.EVENTS, Addresses.ROBOT_COMMANDS, Addresses.ROBOT_TELEMETRY}) {
                     String settings = management(session, "broker", "getAddressSettingsAsJSON", address).toString();
-                    assertThat(settings).containsPattern("\"maxDeliveryAttempts\"\\s*:\\s*3")
-                            .containsPattern("\"redeliveryDelay\"\\s*:\\s*1000")
-                            .containsPattern("\"redeliveryMultiplier\"\\s*:\\s*2")
-                            .contains("DLQ", "ExpiryQueue");
+                    assertRetrySettings(settings);
                 }
             }
         }
@@ -56,6 +55,27 @@ class ArtemisBrokerIT {
             assertThatThrownBy(() -> factory.createConnection("c004", "wrong-password"))
                     .isInstanceOf(JMSException.class);
         }
+    }
+
+    private static void assertRetrySettings(String settings) {
+        assertThat(settings).containsPattern("\"maxDeliveryAttempts\"\\s*:\\s*3\\s*[,}]")
+                .containsPattern("\"redeliveryDelay\"\\s*:\\s*1000\\s*[,}]")
+                .containsPattern("\"redeliveryMultiplier\"\\s*:\\s*2(?:\\.0)?\\s*[,}]")
+                .containsPattern("\"maxRedeliveryDelay\"\\s*:\\s*10000\\s*[,}]")
+                .containsPattern("\"deadLetterAddress\"\\s*:\\s*\"DLQ\"")
+                .containsPattern("\"expiryAddress\"\\s*:\\s*\"ExpiryQueue\"");
+    }
+
+    @ParameterizedTest
+    @CsvSource({"maxDeliveryAttempts,3,30", "redeliveryDelay,1000,10000", "maxRedeliveryDelay,10000,100000"})
+    void rejectsNumericPrefixes(String field, String expected, String incorrect) {
+        String valid = """
+                {"maxDeliveryAttempts":3,"redeliveryDelay":1000,"redeliveryMultiplier":2.0,
+                 "maxRedeliveryDelay":10000,"deadLetterAddress":"DLQ","expiryAddress":"ExpiryQueue"}
+                """;
+        assertRetrySettings(valid);
+        String invalid = valid.replace("\"" + field + "\":" + expected, "\"" + field + "\":" + incorrect);
+        assertThatThrownBy(() -> assertRetrySettings(invalid)).isInstanceOf(AssertionError.class);
     }
 
     private void assertBinding(Session session, String queue, String address, String routing) throws Exception {

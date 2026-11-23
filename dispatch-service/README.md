@@ -1,5 +1,48 @@
 # Dispatch service
 
+## Listener reliability and architecture tests — C009
+
+With Java 25, the Maven environment below and Docker access, run:
+
+```sh
+rtk proxy ./mvnw -B -ntp -Dmaven.repo.local=/tmp/doserunner-maven/repository \
+  -pl dispatch-service -am -Dtest=DispatchArchitectureTest,DispatchArchitectureRulesTest \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dit.test=DispatchMessagingIT,ArtemisBrokerIT verify
+```
+
+These tests reuse disposable `apache/activemq-artemis:2.44.0` and `postgres:16.16`
+containers. The broker fixture loads the repository's unchanged `broker.xml`
+through its real startup script; no development database, queue or volume is used.
+`ArtemisBrokerIT` checks the loaded XML, live bindings and management-reported
+three-attempt limit, 1000 ms delay, multiplier 2, 10000 ms cap, DLQ and expiry
+destinations. Its transacted client also verifies the broker rollback behavior.
+
+`DispatchMessagingIT` exercises the real Spring listener, Avro adapter, database
+transactions and output publication. For malformed Avro, unsupported text, bad
+UUID, conflicting metadata and unavailable fleet, a spy pauses each delivery
+before invoking the actual listener. The test observes an empty DLQ before each
+failure, counts 1/2/3 with redelivery flags and delayed retries, then exactly one
+dead letter retaining its body, trace/correlation and source address/queue. It
+checks no fourth delivery and no mission, inbox, outbox, sequence or BUSY update.
+Failures come from application processing; the spy does not replace that logic.
+
+`DispatchArchitectureTest` imports production dispatch classes only. ArchUnit
+(version already managed by the parent) enforces presentation through facades,
+no reverse dependencies from lower layers, framework-free business objects,
+DAO independence, and Spring/Jakarta transaction annotations only in facades
+(both classes and methods, including composed annotations). Regression fixtures
+check direct and composed Spring/Jakarta transactions outside facades are rejected
+while facade transactions remain allowed. Retry-setting regressions reject numeric
+prefixes such as a cap of 100000 when 10000 is required; all retry-number checks
+require a JSON delimiter after the value. Shared contract codecs remain valid
+adapter inputs; the rules scope internal layers to the dispatch package.
+
+Return to root `verify` for the full core reactor. These are local integration
+checks; they do not establish hosted CI, full shared-service I3, broker HA or
+exactly-once execution. The existing separate DB/JMS commit window and finite
+duplicate cache remain unchanged.
+
 ## Fleet board — C008
 
 Open **http://localhost:8083/ui/fleet** with dispatch, fleet PostgreSQL and the
