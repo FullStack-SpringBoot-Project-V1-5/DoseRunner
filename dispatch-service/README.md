@@ -1,4 +1,57 @@
-# Dispatch service — C001/C002/C003
+# Dispatch service
+
+## Fleet board — C008
+
+Open **http://localhost:8083/ui/fleet** with dispatch, fleet PostgreSQL and the
+configured Artemis broker running. This is the Day 2 MVC route; the planned
+`/fleet/*` REST endpoints are separate contracts. The server renders a Thymeleaf
+table of every robot (ID, x/y, battery percent, persisted status) and ASSIGNED
+missions (mission/order/robot IDs and status). Empty tables have explicit messages.
+The browser reloads every two seconds using HTML meta refresh; no JavaScript or
+WebSocket is needed. Responses use `Cache-Control: no-store`.
+
+`RobotTelemetryListener` consumes the existing durable multicast queue
+`robot.telemetry::dispatch-service.telemetry`, using the shared frozen Avro
+adapter and transacted `dispatchListenerFactory`. The existing
+`dispatch.messaging.listener-enabled=false` switch stops both dispatch listeners.
+The facade transaction updates only x/y/battery on an existing robot; it never
+creates robots or changes robot/mission status. Updating just those columns avoids
+overwriting a concurrent assignment's BUSY status. The board reads immutable
+snapshots in a read-only repeatable-read transaction with open-in-view disabled.
+
+Invalid coordinates, battery outside 0..100, invalid/unknown robot IDs, bad Avro,
+unsupported message bodies and conflicting supplied robot/eventType metadata
+roll back delivery under the existing three-attempt/DLQ policy. Trace metadata is
+retained in telemetry logs. A database failure prevents JMS acknowledgment.
+The DB commit precedes the separate JMS commit; redelivery of the same reading
+sets the same values. **Telemetry v1 has no timestamp, sequence, event ID, status
+or mission completion field.** The latest arrival wins: an old delayed/replayed
+reading can overwrite a newer one, and seeded/last values do not prove liveness.
+Simulator arrival leaves BUSY/ASSIGNED until a later explicit lifecycle update;
+it does not confirm custody or make the robot available again.
+
+This page inherits the standalone dispatch baseline without authentication;
+shared JWT integration is tracked separately in C012. DLQ browsing, abort controls,
+mission transitions, stale-reading detection and telemetry v2 are outside C008.
+No persistent development queue/database needs to be reset for this feature.
+
+Focused verification (Java 25 and Maven environment in `docs/VERIFICATION.md`):
+
+```sh
+rtk proxy ./mvnw -B -ntp -Dmaven.repo.local=/tmp/doserunner-maven/repository \
+  -pl dispatch-service -am \
+  -Dtest=RobotTelemetryListenerTest,RobotTelemetryFacadeTest \
+  -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=FleetBoardIT verify
+```
+
+This boots real HTTP/Thymeleaf against disposable PostgreSQL and the project
+Artemis configuration. It covers seed/active mission rendering, two-second
+refresh markup, HTML escaping, telemetry/duplicate persistence, validation,
+unchanged assignment status, DB commit rollback and invalid-input DLQ handling.
+Return to root `verify` for the full core reactor. The independent C007 Java 11
+build is unchanged and is not part of that reactor.
+
+## Persistence — C001
 
 Flyway creates `robots` and `missions` in the fleet PostgreSQL database; Hibernate
 validates the mappings (`ddl-auto: validate`). Local defaults are

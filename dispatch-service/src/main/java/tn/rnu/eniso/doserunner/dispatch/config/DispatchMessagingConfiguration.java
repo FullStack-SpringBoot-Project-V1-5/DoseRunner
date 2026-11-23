@@ -33,7 +33,7 @@ public class DispatchMessagingConfiguration {
         listeners.setConcurrency("1");
         listeners.setAutoStartup(environment.getProperty("dispatch.messaging.listener-enabled", Boolean.class, true));
         listeners.setErrorHandler(error -> LoggerFactory.getLogger(DispatchMessagingConfiguration.class)
-                .error("OrderValidated failed; JMS transaction rolled back", error));
+                .error("Dispatch message failed; JMS transaction rolled back", error));
         return listeners;
     }
 }
