@@ -62,6 +62,10 @@ Dev credentials are defaults only; override them with env vars or a local `.env`
   (`@PreAuthorize("hasRole('NURSE')")` works, method security is already on), a stateless chain, and 401/403 as `ApiError`.
 - Public without a token: `/actuator/health/**`, `/actuator/info`, `/error`, `/.well-known/**`, plus your
   `doserunner.security.public-paths`.
+- **Enabled in (I2):** identity, order, dispatch, custody. robot-sim has no HTTP API. The JWT `sub` (user id) is the
+  actor: order-service stores it as `nurseId` / `pharmacistId`, and `X-User-Id` can no longer override it.
+- ⚠ **Thymeleaf pages of order, dispatch and custody (`/ui/**`) are public for now** (no login there yet, they use demo
+  actor ids). Only identity's pages have a form login. Team decision pending for the other UIs.
 - **Tests:** add `test-support` (scope `test`), `@Import(TestJwtConfiguration.class)`, then
   `.header("Authorization", TestJwt.bearer("NURSE"))`. Also `TestJwt.expired(...)`. No identity-service needed.
 - **Rate limit** (every service, no opt-in needed): a token bucket per user (JWT `sub`) or per IP when anonymous.
