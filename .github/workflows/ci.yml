@@ -21,7 +21,13 @@ jobs:
           distribution: temurin
           java-version: '25'
           cache: maven
+      - name: Install libsodium (FFM tests call it for real)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libsodium23
+      - name: Build + test libroute (C)
+        run: make -C native clean all test
       - name: Build + unit/integration tests
+        env:
+          DOSERUNNER_NATIVE_REQUIRED: "true"   # a missing libsodium fails the build instead of skipping tests
         run: ./mvnw -B -ntp verify
       - name: Validate docker-compose file
         run: docker compose -f deploy/compose/docker-compose.yml config -q

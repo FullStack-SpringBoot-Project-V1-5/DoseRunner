@@ -1,6 +1,8 @@
 package tn.rnu.eniso.doserunner.dispatch;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import tn.rnu.eniso.doserunner.dispatch.config.DispatchMessagingProperties;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -12,11 +14,21 @@ import java.net.http.HttpResponse;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /** Boots the whole service and checks it is healthy and wired to commons (trace id echoed). */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class DispatchServiceApplicationSmokeTest {
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = {"DISPATCH_PHARMACY_X=5", "DISPATCH_PHARMACY_Y=7"})
+class DispatchServiceApplicationSmokeTest extends PostgresTestSupport {
 
     @Value("${local.server.port}")
     int port;
+
+    @Autowired
+    DispatchMessagingProperties messaging;
+
+    @Test
+    void pharmacyEnvironmentPropertiesBindThroughApplicationConfiguration() {
+        assertThat(messaging.pharmacyX()).isEqualTo(5);
+        assertThat(messaging.pharmacyY()).isEqualTo(7);
+    }
 
     @Test
     void healthIsUpAndTraceIdIsEchoed() throws Exception {

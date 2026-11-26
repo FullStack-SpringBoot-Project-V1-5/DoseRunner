@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{ui/fragments :: head('Order')}"></head>
+<body>
+<header th:replace="~{ui/fragments :: nav}"></header>
+<main>
+    <div th:replace="~{ui/fragments :: flash}"></div>
+    <h1>Order <span class="mono" th:text="${order.id}">id</span></h1>
+    <section class="card">
+        <dl class="details">
+            <dt>Status</dt>
+            <dd><span class="badge" th:classappend="${'status-' + #strings.toLowerCase(order.status)}"
+                      th:text="${order.status}">PLACED</span></dd>
+            <dt>Patient</dt>
+            <dd th:text="${order.patientRef}">P-0042</dd>
+            <dt>Drug</dt>
+            <dd>
+                <span th:text="${drug.name}">Morphine</span>
+                <span class="badge controlled" th:if="${order.controlled}">controlled</span>
+            </dd>
+            <dt>Quantity</dt>
+            <dd th:text="${order.qty}">2</dd>
+            <dt>Destination</dt>
+            <dd th:text="${order.ward} + (${order.room} != null ? ', room ' + ${order.room} : '')">CARDIO-2</dd>
+            <dt>Ordered by</dt>
+            <dd th:text="${order.nurseId}">u-nurse</dd>
+            <dt>Placed at</dt>
+            <dd th:text="${#temporals.format(order.createdAt, 'yyyy-MM-dd HH:mm:ss', 'UTC')} + ' UTC'">now</dd>
+            <th:block th:if="${order.pharmacistId}">
+                <dt>Pharmacist</dt>
+                <dd th:text="${order.pharmacistId}">u-pharma</dd>
+            </th:block>
+            <th:block th:if="${order.rejectReason}">
+                <dt>Reject reason</dt>
+                <dd th:text="${order.rejectReason}">reason</dd>
+            </th:block>
+        </dl>
+    </section>
+    <p><a th:href="@{/ui/orders/new}">Place another order</a></p>
+</main>
+</body>
+</html>

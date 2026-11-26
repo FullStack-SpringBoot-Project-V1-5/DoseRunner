@@ -29,6 +29,9 @@ public final class Addresses {
     public static final String QUEUE_DISPATCH_SERVICE = "dispatch-service";
     public static final String QUEUE_CUSTODY_SERVICE = "custody-service";
 
+    /** C004 correction: Artemis queue names are global, so telemetry needs its own binding. */
+    public static final String QUEUE_DISPATCH_TELEMETRY = "dispatch-service.telemetry";
+
     /** Fully-qualified queue name, e.g. {@code doserunner.events::dispatch-service}. */
     public static String fqqn(String address, String queue) {
         return address + "::" + queue;

@@ -1,0 +1,28 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <!-- Independent of the Java 25/Spring Boot parent: Knani's Java 11 handoff. -->
+  <groupId>tn.rnu.eniso.doserunner</groupId><artifactId>robot-link-parent</artifactId><version>0.1.0-SNAPSHOT</version><packaging>pom</packaging>
+  <modules><module>contracts-java11</module><module>client</module></modules>
+  <properties>
+    <maven.compiler.release>11</maven.compiler.release><project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.build.outputTimestamp>2026-11-23T00:00:00Z</project.build.outputTimestamp>
+    <avro.version>1.12.2</avro.version><artemis.version>2.38.0</artemis.version>
+  </properties>
+  <dependencyManagement><dependencies>
+    <dependency><groupId>tn.rnu.eniso.doserunner</groupId><artifactId>robot-contracts-java11</artifactId><version>${project.version}</version></dependency>
+    <dependency><groupId>org.apache.avro</groupId><artifactId>avro</artifactId><version>${avro.version}</version></dependency>
+    <dependency><groupId>org.apache.activemq</groupId><artifactId>artemis-jakarta-client</artifactId><version>${artemis.version}</version></dependency>
+    <dependency><groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><version>6.0.3</version></dependency>
+    <dependency><groupId>org.testcontainers</groupId><artifactId>testcontainers-junit-jupiter</artifactId><version>2.0.5</version></dependency>
+  </dependencies></dependencyManagement>
+  <build><pluginManagement><plugins>
+    <plugin><groupId>org.apache.avro</groupId><artifactId>avro-maven-plugin</artifactId><version>${avro.version}</version></plugin>
+    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-clean-plugin</artifactId><version>3.5.0</version></plugin>
+    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-resources-plugin</artifactId><version>3.5.0</version></plugin>
+    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><version>3.15.0</version></plugin>
+    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-jar-plugin</artifactId><version>3.5.1</version></plugin>
+    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId><version>3.5.6</version></plugin>
+    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-failsafe-plugin</artifactId><version>3.5.6</version></plugin>
+    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-dependency-plugin</artifactId><version>3.10.0</version></plugin>
+  </plugins></pluginManagement></build>
+</project>
