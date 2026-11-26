@@ -7,6 +7,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import tn.rnu.eniso.doserunner.custody.bo.LinkType;
 import tn.rnu.eniso.doserunner.custody.facade.CustodyFacade;
 import tn.rnu.eniso.doserunner.custody.facade.RecordCommand;
+import tn.rnu.eniso.doserunner.testsupport.TestJwt;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -31,10 +32,20 @@ class CustodyServiceApplicationSmokeTest {
     @Autowired
     JdbcTemplate jdbc;
 
+    /** GET as an AUDITOR (the role that can read everything here). */
     private HttpResponse<String> get(String path, String requestId) throws Exception {
+        return get(path, requestId, TestJwt.forRoles("AUDITOR"));
+    }
+
+    /** GET with a given token, or none when {@code token} is null. */
+    private HttpResponse<String> get(String path, String requestId, String token) throws Exception {
+        HttpRequest.Builder req = HttpRequest.newBuilder(URI.create("http://localhost:" + port + path))
+                .header("x-request-id", requestId);
+        if (token != null) {
+            req.header("Authorization", "Bearer " + token);
+        }
         try (HttpClient client = HttpClient.newHttpClient()) {
-            return client.send(HttpRequest.newBuilder(URI.create("http://localhost:" + port + path))
-                    .header("x-request-id", requestId).build(), HttpResponse.BodyHandlers.ofString());
+            return client.send(req.build(), HttpResponse.BodyHandlers.ofString());
         }
     }
 
@@ -122,5 +133,34 @@ class CustodyServiceApplicationSmokeTest {
 
         assertThat(res.statusCode()).isEqualTo(302);
         assertThat(res.headers().firstValue("location")).hasValueSatisfying(l -> assertThat(l).endsWith("/ui/audit/ORD-42"));
+    }
+
+    @Test
+    void i2NoTokenIs401ApiErrorAndExpiredTokenIs401() throws Exception {
+        HttpResponse<String> none = get("/custody/public-key", "smoke-i2-1", null);
+        assertThat(none.statusCode()).isEqualTo(401);
+        assertThat(none.headers().firstValue("WWW-Authenticate")).contains("Bearer");
+        assertThat(none.body()).contains("\"status\":401", "\"traceId\":\"smoke-i2-1\"");
+        assertThat(get("/custody/public-key", "smoke-i2-2", TestJwt.expired("AUDITOR")).statusCode()).isEqualTo(401);
+    }
+
+    @Test
+    void i2PharmacistReadsTheChainButOnlyAuditorsVerify() throws Exception {
+        String order = recordTwoLinks();
+        String pharmacist = TestJwt.forRoles("PHARMACIST");
+
+        assertThat(get("/custody/orders/" + order, "smoke-i2-3", pharmacist).statusCode()).isEqualTo(200);
+        HttpResponse<String> verify = get("/custody/orders/" + order + "/verify", "smoke-i2-4", pharmacist);
+        assertThat(verify.statusCode()).isEqualTo(403);
+        assertThat(verify.body()).contains("\"status\":403", "\"traceId\":\"smoke-i2-4\"");
+        assertThat(get("/custody/public-key", "smoke-i2-5", pharmacist).statusCode()).isEqualTo(403);
+    }
+
+    @Test
+    void i2NurseCannotReadTheLedgerButTheAuditPageStaysPublic() throws Exception {
+        String order = recordTwoLinks();
+        assertThat(get("/custody/orders/" + order, "smoke-i2-6", TestJwt.forRoles("NURSE")).statusCode())
+                .isEqualTo(403);
+        assertThat(get("/ui/audit/" + order, "smoke-i2-7", null).statusCode()).isEqualTo(200);
     }
 }
