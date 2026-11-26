@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="refresh" content="2">
+    <title>Fleet board · DoseRunner</title>
+    <style>
+        body { margin: 0; background: #f4f6f8; color: #172c3b; font: 1rem/1.5 system-ui, sans-serif; }
+        main { max-width: 76rem; margin: auto; padding: 2rem 1rem; }
+        h1, h2 { line-height: 1.2; }
+        h1 { margin-bottom: .5rem; }
+        h2 { margin-top: 2rem; }
+        .note { color: #455967; }
+        .table-scroll { overflow-x: auto; background: white; border: 1px solid #d4dde3; border-radius: .5rem; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        caption { padding: 1rem; text-align: left; font-weight: 600; }
+        th, td { padding: .75rem 1rem; border-top: 1px solid #e0e6eb; }
+        th { background: #eaf0f4; }
+        .id { overflow-wrap: anywhere; }
+    </style>
+</head>
+<body>
+<main>
+    <h1>Fleet board</h1>
+    <p class="note">Refreshes every 2 seconds. Positions and battery show the latest received readings or seeded values.</p>
+    <h2>Robots</h2>
+    <div class="table-scroll" role="region" aria-label="Robot fleet" tabindex="0">
+        <table>
+            <caption>Robot position, battery and persisted status</caption>
+            <thead><tr><th scope="col">Robot</th><th scope="col">X</th><th scope="col">Y</th><th scope="col">Battery</th><th scope="col">Status</th></tr></thead>
+            <tbody>
+            <tr th:each="robot : ${fleet.robots}" th:attr="data-robot-id=${robot.id}">
+                <th scope="row" th:text="${robot.id}">R-01</th>
+                <td th:text="${robot.x}">0</td><td th:text="${robot.y}">0</td>
+                <td th:text="|${robot.battery}%|">100%</td><td th:text="${robot.status}">IDLE</td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(fleet.robots)}"><td colspan="5">No robots available.</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <h2>Active missions</h2>
+    <p class="note">Assignment status stays until an explicit mission update; arrival alone does not confirm delivery.</p>
+    <div class="table-scroll" role="region" aria-label="Active missions" tabindex="0">
+        <table>
+            <caption>Assigned missions</caption>
+            <thead><tr><th scope="col">Mission</th><th scope="col">Order</th><th scope="col">Robot</th><th scope="col">Status</th></tr></thead>
+            <tbody>
+            <tr th:each="mission : ${fleet.missions}">
+                <td class="id" th:text="${mission.id}"></td><td class="id" th:text="${mission.orderId}"></td>
+                <td th:text="${mission.robotId}"></td><td th:text="${mission.status}"></td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(fleet.missions)}"><td colspan="4">No active missions.</td></tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>
