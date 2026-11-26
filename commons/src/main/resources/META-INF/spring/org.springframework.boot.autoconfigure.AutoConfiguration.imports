@@ -1,1 +1,3 @@
 tn.rnu.eniso.doserunner.commons.config.CommonsWebAutoConfiguration
+tn.rnu.eniso.doserunner.commons.config.DoseRunnerResourceServerAutoConfiguration
+tn.rnu.eniso.doserunner.commons.config.RateLimitAutoConfiguration
