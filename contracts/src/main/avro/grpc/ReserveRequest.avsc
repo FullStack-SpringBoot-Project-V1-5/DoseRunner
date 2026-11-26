@@ -1,0 +1,12 @@
+{
+  "type": "record",
+  "name": "ReserveRequest",
+  "namespace": "tn.rnu.eniso.doserunner.contracts.grpc",
+  "doc": "FleetService.ReserveRobot (order-service -> dispatch-service). Idempotent on order.orderId: calling twice returns the same reservation.",
+  "fields": [
+    { "name": "order", "type": "tn.rnu.eniso.doserunner.contracts.common.OrderRef" },
+    { "name": "destination", "type": "tn.rnu.eniso.doserunner.contracts.common.Location" },
+    { "name": "controlled", "type": "boolean" },
+    { "name": "holdSeconds", "type": "int", "default": 120, "doc": "The reservation expires if no mission is created for this order within this delay." }
+  ]
+}

@@ -1,0 +1,23 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion><parent><groupId>tn.rnu.eniso.doserunner</groupId><artifactId>robot-link-parent</artifactId><version>0.1.0-SNAPSHOT</version></parent>
+  <artifactId>robot-link</artifactId>
+  <dependencies>
+    <dependency><groupId>tn.rnu.eniso.doserunner</groupId><artifactId>robot-contracts-java11</artifactId></dependency>
+    <dependency><groupId>org.apache.activemq</groupId><artifactId>artemis-jakarta-client</artifactId></dependency>
+    <dependency><groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><scope>test</scope></dependency>
+    <dependency><groupId>org.testcontainers</groupId><artifactId>testcontainers-junit-jupiter</artifactId><scope>test</scope></dependency>
+  </dependencies>
+  <build><plugins>
+    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><configuration><testRelease>25</testRelease></configuration></plugin>
+    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-failsafe-plugin</artifactId>
+      <executions><execution><goals><goal>integration-test</goal><goal>verify</goal></goals></execution></executions>
+      <configuration><systemPropertyVariables>
+        <repository.root>${project.basedir}/../../..</repository.root><handoff.directory>${project.build.directory}</handoff.directory>
+      </systemPropertyVariables></configuration>
+    </plugin>
+    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-dependency-plugin</artifactId><executions><execution>
+      <id>handoff-runtime</id><phase>package</phase><goals><goal>copy-dependencies</goal></goals>
+      <configuration><includeScope>runtime</includeScope><outputDirectory>${project.build.directory}/lib</outputDirectory></configuration>
+    </execution></executions></plugin>
+  </plugins></build>
+</project>

@@ -1,0 +1,15 @@
+{
+  "type": "record",
+  "name": "MissionCommand",
+  "namespace": "tn.rnu.eniso.doserunner.contracts.robot",
+  "doc": "Producer: dispatch-service on anycast address robot.commands, JMS properties robotId=<id> and JMSXGroupID=<id> (strict order per robot). Consumers: robot-sim / ros-bridge, each with selector robotId='<own id>'. Also read by the Java 11 ros-bridge: keep it to plain types.",
+  "fields": [
+    { "name": "missionId", "type": "string" },
+    { "name": "robotId", "type": "string" },
+    { "name": "orderId", "type": "string" },
+    { "name": "seq", "type": "int", "doc": "Per-robot command sequence number, starts at 1. Lets the robot detect a gap or a duplicate." },
+    { "name": "waypoints", "type": { "type": "array", "items": "tn.rnu.eniso.doserunner.contracts.common.GridPoint" }, "doc": "Cells to drive through, in order (first = next cell, last = destination)." },
+    { "name": "compartmentCode", "type": "string", "doc": "Which locked compartment holds the medication." },
+    { "name": "issuedAt", "type": { "type": "long", "logicalType": "timestamp-millis" } }
+  ]
+}

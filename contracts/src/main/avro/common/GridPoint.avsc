@@ -1,0 +1,10 @@
+{
+  "type": "record",
+  "name": "GridPoint",
+  "namespace": "tn.rnu.eniso.doserunner.contracts.common",
+  "doc": "One cell of the hospital floor grid used by libroute (A*). Origin (0,0) = top-left of the map.",
+  "fields": [
+    { "name": "x", "type": "int", "doc": "Column, 0-based." },
+    { "name": "y", "type": "int", "doc": "Row, 0-based." }
+  ]
+}
