@@ -28,6 +28,14 @@ management:
       probes:
         enabled: true
 
+doserunner:
+  # I2: JWT resource server (commons/sec). Compose sets DOSERUNNER_SECURITY_JWKSURI to identity-service.
+  # No REST endpoint yet: the /fleet API from the README will need a Bearer token as soon as it exists.
+  security:
+    jwks-uri: http://localhost:8081/.well-known/jwks.json
+    public-paths:
+      - /ui/**          # fleet board stays open until the UI gets its own login (team decision pending)
+
 dispatch:
   messaging:
     pharmacy-x: ${DISPATCH_PHARMACY_X:0}
