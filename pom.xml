@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+      DoseRunner parent POM.
+      RULE: every dependency/plugin version lives HERE. Child modules never declare a <version>.
+      Anything Spring Boot already manages (Spring, Jackson, Hibernate, Flyway, Postgres driver,
+      Artemis client, Caffeine, Testcontainers, JUnit, Mockito...) comes from the Boot BOM below.
+    -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>4.1.2</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>tn.rnu.eniso.doserunner</groupId>
+    <artifactId>doserunner-parent</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>DoseRunner</name>
+    <description>Hospital medication logistics platform: orders, robot dispatch, signed custody ledger.</description>
+
+    <modules>
+        <module>contracts</module>
+        <module>commons</module>
+        <module>commons-native</module>
+        <module>identity-service</module>
+        <module>order-service</module>
+        <module>dispatch-service</module>
+        <module>dispatch-strategy-v2</module>
+        <module>custody-service</module>
+        <module>robot-sim</module>
+        <!-- ros-bridge is NOT in this reactor: separate Gradle/Java 11 build (rosjava constraint). -->
+    </modules>
+
+    <properties>
+        <java.version>25</java.version>
+        <maven.compiler.release>25</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!-- Pinned versions not managed by Spring Boot -->
+        <avro.version>1.12.2</avro.version>
+        <grpc.version>1.85.1</grpc.version>
+        <resilience4j.version>2.4.0</resilience4j.version>
+        <archunit.version>1.5.1</archunit.version>
+        <logstash-logback-encoder.version>9.0</logstash-logback-encoder.version>
+        <bucket4j.version>8.22.0</bucket4j.version>
+        <jmh.version>1.37</jmh.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- internal modules -->
+            <dependency>
+                <groupId>tn.rnu.eniso.doserunner</groupId>
+                <artifactId>contracts</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>tn.rnu.eniso.doserunner</groupId>
+                <artifactId>commons</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>tn.rnu.eniso.doserunner</groupId>
+                <artifactId>commons-native</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>tn.rnu.eniso.doserunner</groupId>
+                <artifactId>dispatch-strategy-v2</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- BOMs -->
+            <dependency>
+                <groupId>io.grpc</groupId>
+                <artifactId>grpc-bom</artifactId>
+                <version>${grpc.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.github.resilience4j</groupId>
+                <artifactId>resilience4j-bom</artifactId>
+                <version>${resilience4j.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- single artifacts -->
+            <dependency>
+                <groupId>org.apache.avro</groupId>
+                <artifactId>avro</artifactId>
+                <version>${avro.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.logstash.logback</groupId>
+                <artifactId>logstash-logback-encoder</artifactId>
+                <version>${logstash-logback-encoder.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.bucket4j</groupId>
+                <artifactId>bucket4j_jdk17-core</artifactId>
+                <version>${bucket4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.tngtech.archunit</groupId>
+                <artifactId>archunit-junit5</artifactId>
+                <version>${archunit.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.openjdk.jmh</groupId>
+                <artifactId>jmh-core</artifactId>
+                <version>${jmh.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.openjdk.jmh</groupId>
+                <artifactId>jmh-generator-annprocess</artifactId>
+                <version>${jmh.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.avro</groupId>
+                    <artifactId>avro-maven-plugin</artifactId>
+                    <version>${avro.version}</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+</project>
