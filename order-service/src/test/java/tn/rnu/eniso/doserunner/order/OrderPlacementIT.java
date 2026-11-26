@@ -28,6 +28,8 @@ import java.util.concurrent.Future;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static tn.rnu.eniso.doserunner.order.support.AuthTokens.nurse;
+import static tn.rnu.eniso.doserunner.order.support.AuthTokens.pharmacist;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -60,7 +62,7 @@ class OrderPlacementIT extends ContainersSupport {
         String drug = stock.newDrug(false, 10);
 
         mvc.perform(post("/orders").contentType(MediaType.APPLICATION_JSON)
-                        .header("X-User-Id", "u-nurse-1")
+                        .with(nurse("u-nurse-1"))
                         .content(orderJson(drug, 3)))
                 .andExpect(status().isCreated())
                 .andExpect(header().string("Location", containsString("/orders/")))
@@ -79,6 +81,7 @@ class OrderPlacementIT extends ContainersSupport {
 
         mvc.perform(post("/orders").contentType(MediaType.APPLICATION_JSON)
                         .header("x-request-id", "it-409")
+                        .with(nurse())
                         .content(orderJson(drug, 5)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.status").value(409))
@@ -141,7 +144,7 @@ class OrderPlacementIT extends ContainersSupport {
         String drug = stock.newDrug(false, 6);
         OrderView order = orderFacade.place(new PlaceOrderCommand("P-7", drug, 4, "ICU-1", "3"), "u-nurse");
 
-        mvc.perform(post("/pharmacy/orders/{id}/reject", order.id()).contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post("/pharmacy/orders/{id}/reject", order.id()).with(pharmacist()).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"reason\":\"duplicate prescription\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("REJECTED"))
@@ -156,11 +159,11 @@ class OrderPlacementIT extends ContainersSupport {
         String drug = stock.newDrug(true, 6);
         OrderView order = orderFacade.place(new PlaceOrderCommand("P-8", drug, 1, "CARDIO-2", null), "u-nurse");
 
-        mvc.perform(post("/pharmacy/orders/{id}/validate", order.id()).header("X-User-Id", "u-pharma"))
+        mvc.perform(post("/pharmacy/orders/{id}/validate", order.id()).with(pharmacist("u-pharma")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("VALIDATED"))
                 .andExpect(jsonPath("$.pharmacistId").value("u-pharma"));
-        mvc.perform(post("/pharmacy/orders/{id}/validate", order.id()))
+        mvc.perform(post("/pharmacy/orders/{id}/validate", order.id()).with(pharmacist()))
                 .andExpect(status().isConflict());
 
         assertThat(orderFacade.get(order.id()).status()).isEqualTo(OrderStatus.VALIDATED);
@@ -168,22 +171,22 @@ class OrderPlacementIT extends ContainersSupport {
 
     @Test
     void invalidRequestsAre400WithFieldErrors() throws Exception {
-        mvc.perform(post("/orders").contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post("/orders").with(nurse()).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"patientRef\":\"\",\"drugCode\":\"PARA-500\",\"qty\":0,\"ward\":\"ER\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fieldErrors.length()").value(2));
-        mvc.perform(post("/orders").contentType(MediaType.APPLICATION_JSON).content("{not json"))
+        mvc.perform(post("/orders").with(nurse()).contentType(MediaType.APPLICATION_JSON).content("{not json"))
                 .andExpect(status().isBadRequest());
-        mvc.perform(post("/orders").contentType(MediaType.APPLICATION_JSON).content(orderJson("NOPE", 1)))
+        mvc.perform(post("/orders").with(nurse()).contentType(MediaType.APPLICATION_JSON).content(orderJson("NOPE", 1)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Unknown drug code NOPE"));
-        mvc.perform(get("/orders").param("status", "FLYING"))
+        mvc.perform(get("/orders").with(nurse()).param("status", "FLYING"))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     void unknownOrderIs404() throws Exception {
-        mvc.perform(get("/orders/{id}", UUID.randomUUID()))
+        mvc.perform(get("/orders/{id}", UUID.randomUUID()).with(nurse()))
                 .andExpect(status().isNotFound());
     }
 
@@ -192,14 +195,14 @@ class OrderPlacementIT extends ContainersSupport {
         String drug = stock.newDrug(false, 10);
         orderFacade.place(new PlaceOrderCommand("P-S1", drug, 1, "MAT-1", null), "u-nurse");
 
-        mvc.perform(get("/orders").param("status", "PLACED").param("ward", "MAT-1").param("size", "100"))
+        mvc.perform(get("/orders").with(nurse()).param("status", "PLACED").param("ward", "MAT-1").param("size", "100"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[?(@.drugCode == '" + drug + "')]").exists())
                 .andExpect(jsonPath("$.size").value(100));
-        mvc.perform(get("/pharmacy/queue"))
+        mvc.perform(get("/pharmacy/queue").with(pharmacist()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[?(@.drugCode == '" + drug + "')].ward").value("MAT-1"));
-        mvc.perform(get("/pharmacy/stock"))
+        mvc.perform(get("/pharmacy/stock").with(pharmacist()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[?(@.drugCode == '" + drug + "')].reserved").value(1));
     }

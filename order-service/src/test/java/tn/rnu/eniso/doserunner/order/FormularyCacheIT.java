@@ -20,6 +20,8 @@ import tn.rnu.eniso.doserunner.order.support.ContainersSupport;
 import tn.rnu.eniso.doserunner.order.support.TestStock;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static tn.rnu.eniso.doserunner.order.support.AuthTokens.nurse;
+import static tn.rnu.eniso.doserunner.order.support.AuthTokens.pharmacist;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -97,14 +99,14 @@ class FormularyCacheIT extends ContainersSupport {
     void restEndpointsServeAndUpdateTheFormulary() throws Exception {
         String code = new TestStock(jdbc).newDrug(false, 1);
 
-        mvc.perform(get("/formulary/{code}", code)).andExpect(status().isOk())
+        mvc.perform(get("/formulary/{code}", code).with(nurse())).andExpect(status().isOk())
                 .andExpect(jsonPath("$.controlled").value(false));
-        mvc.perform(put("/formulary/{code}", code).contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(put("/formulary/{code}", code).with(pharmacist()).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Updated\",\"form\":\"INJECTION\",\"controlled\":true}"))
                 .andExpect(status().isOk());
-        mvc.perform(get("/formulary/{code}", code)).andExpect(status().isOk())
+        mvc.perform(get("/formulary/{code}", code).with(nurse())).andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Updated"))
                 .andExpect(jsonPath("$.controlled").value(true));
-        mvc.perform(get("/formulary/{code}", "NOPE")).andExpect(status().isNotFound());
+        mvc.perform(get("/formulary/{code}", "NOPE").with(nurse())).andExpect(status().isNotFound());
     }
 }

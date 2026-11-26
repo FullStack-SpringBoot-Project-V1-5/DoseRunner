@@ -5,6 +5,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -34,6 +35,7 @@ public class OrderController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('NURSE')")
     public ResponseEntity<OrderView> place(@Valid @RequestBody PlaceOrderRequest body, HttpServletRequest request) {
         OrderView order = orderFacade.place(body.toCommand(), currentActor.nurseId(request));
         URI location = ServletUriComponentsBuilder.fromCurrentRequestUri().path("/{id}")
@@ -42,11 +44,13 @@ public class OrderController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('NURSE', 'PHARMACIST', 'AUDITOR')")
     public OrderView get(@PathVariable UUID id) {
         return orderFacade.get(id);
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('NURSE', 'PHARMACIST')")
     public PageView<OrderView> search(@RequestParam(required = false) OrderStatus status,
                                       @RequestParam(required = false) String ward,
                                       @RequestParam(defaultValue = "0") @Min(0) int page,

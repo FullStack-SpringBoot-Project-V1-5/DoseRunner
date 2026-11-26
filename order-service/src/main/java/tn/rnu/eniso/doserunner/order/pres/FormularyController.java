@@ -1,6 +1,7 @@
 package tn.rnu.eniso.doserunner.order.pres;
 
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -33,6 +34,7 @@ public class FormularyController {
     }
 
     @PutMapping("/{code}")
+    @PreAuthorize("hasRole('PHARMACIST')")
     public DrugView update(@PathVariable String code, @Valid @RequestBody UpdateDrugRequest body) {
         return formularyFacade.update(code, body.toCommand());
     }

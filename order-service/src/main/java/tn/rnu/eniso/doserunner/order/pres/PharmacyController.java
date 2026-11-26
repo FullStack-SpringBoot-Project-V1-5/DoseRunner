@@ -2,6 +2,7 @@ package tn.rnu.eniso.doserunner.order.pres;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,6 +19,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/pharmacy")
+@PreAuthorize("hasRole('PHARMACIST')")
 public class PharmacyController {
 
     private final OrderFacade orderFacade;
