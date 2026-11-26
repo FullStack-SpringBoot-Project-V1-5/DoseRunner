@@ -1,0 +1,12 @@
+{
+  "type": "record",
+  "name": "ReserveReply",
+  "namespace": "tn.rnu.eniso.doserunner.contracts.grpc",
+  "fields": [
+    { "name": "order", "type": "tn.rnu.eniso.doserunner.contracts.common.OrderRef" },
+    { "name": "reserved", "type": "boolean" },
+    { "name": "robot", "type": ["null", "tn.rnu.eniso.doserunner.contracts.common.RobotRef"], "default": null, "doc": "Null when reserved=false." },
+    { "name": "etaSeconds", "type": ["null", "int"], "default": null },
+    { "name": "reason", "type": ["null", "string"], "default": null, "doc": "Why reserved=false (no idle robot, all low battery...)." }
+  ]
+}

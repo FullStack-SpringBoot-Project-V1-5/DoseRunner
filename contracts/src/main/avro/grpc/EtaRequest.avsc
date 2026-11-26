@@ -1,0 +1,11 @@
+{
+  "type": "record",
+  "name": "EtaRequest",
+  "namespace": "tn.rnu.eniso.doserunner.contracts.grpc",
+  "doc": "FleetService.GetEta (order-service -> dispatch-service). Read-only: reserves nothing.",
+  "fields": [
+    { "name": "order", "type": "tn.rnu.eniso.doserunner.contracts.common.OrderRef" },
+    { "name": "destination", "type": "tn.rnu.eniso.doserunner.contracts.common.Location" },
+    { "name": "controlled", "type": "boolean" }
+  ]
+}

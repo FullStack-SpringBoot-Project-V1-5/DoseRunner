@@ -1,0 +1,15 @@
+{
+  "type": "record",
+  "name": "RobotAssigned",
+  "namespace": "tn.rnu.eniso.doserunner.contracts.events",
+  "doc": "Producer: dispatch-service, once the strategy picked a robot and libroute computed the path. Consumers: order-service (marks the order ASSIGNED, so a later DispatchTimedOut is ignored), custody-service.",
+  "fields": [
+    { "name": "eventId", "type": "string", "doc": "UUID of this event. Consumers keep processed ids to drop duplicates (Artemis delivery is at-least-once)." },
+    { "name": "occurredAt", "type": { "type": "long", "logicalType": "timestamp-millis" }, "doc": "When the fact happened (UTC)." },
+    { "name": "orderId", "type": "string", "doc": "Saga correlation key." },
+    { "name": "robotId", "type": "string" },
+    { "name": "missionId", "type": "string", "doc": "UUID of the mission created by dispatch-service." },
+    { "name": "etaSeconds", "type": "int", "doc": "Estimated seconds until the robot reaches the destination." },
+    { "name": "path", "type": { "type": "array", "items": "tn.rnu.eniso.doserunner.contracts.common.GridPoint" }, "doc": "Full path pharmacy -> destination, computed by libroute." }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "type": "record",
+  "name": "RobotRef",
+  "namespace": "tn.rnu.eniso.doserunner.contracts.common",
+  "doc": "Reference to a robot owned by dispatch-service.",
+  "fields": [
+    { "name": "robotId", "type": "string", "doc": "Fleet id, e.g. 'R-01'." }
+  ]
+}

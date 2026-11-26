@@ -1,0 +1,11 @@
+{
+  "type": "record",
+  "name": "DispatchTimedOut",
+  "namespace": "tn.rnu.eniso.doserunner.contracts.events",
+  "doc": "Producer: order-service, sent as an Artemis SCHEDULED message (T+120 s) at validation time. Consumer: order-service itself: if no RobotAssigned was seen, it releases the stock and sets MANUAL_DELIVERY (saga compensation).",
+  "fields": [
+    { "name": "eventId", "type": "string", "doc": "UUID of this event. Consumers keep processed ids to drop duplicates (Artemis delivery is at-least-once)." },
+    { "name": "occurredAt", "type": { "type": "long", "logicalType": "timestamp-millis" }, "doc": "When the fact happened (UTC)." },
+    { "name": "orderId", "type": "string", "doc": "Saga correlation key." }
+  ]
+}
