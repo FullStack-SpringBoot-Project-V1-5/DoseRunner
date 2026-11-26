@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{ui/fragments :: head('Users')}"></head>
+<body>
+<header th:replace="~{ui/fragments :: nav(${me})}"></header>
+<main class="stack">
+    <div th:replace="~{ui/fragments :: flash}"></div>
+
+    <section>
+        <h1>Users</h1>
+        <table class="queue">
+            <thead>
+            <tr>
+                <th>Username</th>
+                <th>Roles</th>
+                <th>Status</th>
+                <th>Account</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="u : ${users}" th:classappend="${!u.enabled} ? 'is-disabled'">
+                <td class="mono" th:text="${u.username}">nurse</td>
+                <td>
+                    <form class="actions" th:action="@{/ui/admin/users/{id}/roles(id=${u.id})}" method="post">
+                        <div class="roles">
+                            <label th:each="r : ${roles}">
+                                <input type="checkbox" name="roles" th:value="${r}"
+                                       th:checked="${#lists.contains(u.roles, r)}">
+                                <span th:text="${r}">NURSE</span>
+                            </label>
+                        </div>
+                        <button type="submit">Save roles</button>
+                    </form>
+                </td>
+                <td>
+                    <span class="badge enabled" th:if="${u.enabled}">enabled</span>
+                    <span class="badge disabled" th:unless="${u.enabled}">disabled</span>
+                </td>
+                <td class="actions">
+                    <form th:action="@{/ui/admin/users/{id}/enabled(id=${u.id})}" method="post">
+                        <input type="hidden" name="enabled" th:value="${!u.enabled}">
+                        <button type="submit" th:class="${u.enabled} ? 'secondary'"
+                                th:text="${u.enabled} ? 'Disable' : 'Enable'"
+                                th:disabled="${u.username == me and u.enabled}">Disable</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section class="card">
+        <h1>New user</h1>
+        <form th:action="@{/ui/admin/users}" method="post">
+            <label for="new-username">Username</label>
+            <input id="new-username" name="username" type="text" maxlength="32" autocomplete="off" required>
+            <label for="new-password">Password</label>
+            <input id="new-password" name="password" type="password" maxlength="72" autocomplete="new-password" required>
+            <p class="muted">8-72 characters, letters and digits, must not contain the username.</p>
+            <label>Roles</label>
+            <div class="roles">
+                <label th:each="r : ${roles}">
+                    <input type="checkbox" name="roles" th:value="${r}">
+                    <span th:text="${r}">NURSE</span>
+                </label>
+            </div>
+            <button type="submit">Create user</button>
+        </form>
+    </section>
+</main>
+</body>
+</html>

@@ -1,0 +1,10 @@
+# Strict mTLS for the whole mesh: a pod without a sidecar can no longer call a meshed service in plain text.
+# Week 1: apply on Bookinfo and check the lock icons in Kiali. Week 3: the same file protects the DoseRunner services.
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: istio-system   # root namespace = mesh-wide
+spec:
+  mtls:
+    mode: STRICT

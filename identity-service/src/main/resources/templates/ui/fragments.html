@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${title} + ' · DoseRunner'">DoseRunner</title>
+    <link rel="stylesheet" th:href="@{/css/doserunner.css}">
+</head>
+<body>
+<header th:fragment="nav(me)" class="topbar">
+    <a class="brand" th:href="@{/ui/admin/users}">DoseRunner</a>
+    <nav>
+        <a th:href="@{/ui/admin/users}">Users</a>
+    </nav>
+    <div class="who" th:if="${me}">
+        <span class="muted" th:text="${me}">admin</span>
+        <form th:action="@{/logout}" method="post">
+            <button type="submit" class="secondary">Log out</button>
+        </form>
+    </div>
+</header>
+<div th:fragment="flash">
+    <p class="flash success" th:if="${message}" th:text="${message}">Saved.</p>
+    <p class="flash error" th:if="${error}" th:text="${error}">Something went wrong.</p>
+</div>
+</body>
+</html>

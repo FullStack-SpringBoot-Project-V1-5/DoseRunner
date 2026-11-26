@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{ui/fragments :: head('Forbidden')}"></head>
+<body>
+<header th:replace="~{ui/fragments :: nav(${me})}"></header>
+<main>
+    <div class="card">
+        <h1>Access denied</h1>
+        <p>This page needs the <strong>ADMIN</strong> role.</p>
+        <p class="muted">Log out and sign in with an administrator account.</p>
+    </div>
+</main>
+</body>
+</html>

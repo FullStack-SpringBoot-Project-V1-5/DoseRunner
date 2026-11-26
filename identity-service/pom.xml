@@ -51,6 +51,11 @@
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
+        <!-- Thymeleaf pages: /login, /ui/admin/users (session + form-login chain, see UiSecurityConfiguration) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-thymeleaf</artifactId>
+        </dependency>
         <!-- Spring Security + spring-security-oauth2-jose (Nimbus): issues and validates RS256 JWTs -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
