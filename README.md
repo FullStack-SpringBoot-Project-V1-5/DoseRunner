@@ -40,6 +40,7 @@ sh deploy/compose/gen-jwt-key.sh          # once: identity-service signing key (
 docker compose -f deploy/compose/docker-compose.yml up --build -d
 curl http://localhost:8082/actuator/health      # {"status":"UP",...}
 docker compose -f deploy/compose/docker-compose.yml logs -f order-service   # JSON logs with traceId
+sh deploy/compose/week1-gate.sh            # end-to-end check: login → order → UI validation → Artemis → robot moves
 ```
 | What            | URL / port                                   |
 |-----------------|----------------------------------------------|
