@@ -24,6 +24,8 @@ import tn.rnu.eniso.doserunner.order.support.ContainersSupport;
 import tn.rnu.eniso.doserunner.order.support.TestStock;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static tn.rnu.eniso.doserunner.order.support.AuthTokens.nurse;
+import static tn.rnu.eniso.doserunner.order.support.AuthTokens.pharmacist;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -67,7 +69,7 @@ class OrderEventPublishingIT extends ContainersSupport {
 
         String created = mvc.perform(post("/orders").contentType(MediaType.APPLICATION_JSON)
                         .header("x-request-id", "trace-place-1")
-                        .header("X-User-Id", "u-nurse-9")
+                        .with(nurse("u-nurse-9"))
                         .content("""
                                 {"patientRef":"P-0099","drugCode":"%s","qty":2,"ward":"CARDIO-2","room":"214"}
                                 """.formatted(drug)))
@@ -90,7 +92,7 @@ class OrderEventPublishingIT extends ContainersSupport {
 
         mvc.perform(post("/pharmacy/orders/{id}/validate", orderId)
                         .header("x-request-id", "trace-validate-1")
-                        .header("X-User-Id", "u-pharma-3"))
+                        .with(pharmacist("u-pharma-3")))
                 .andExpect(status().isOk());
 
         Message validatedMessage = nextMessageFor(orderId);
@@ -108,6 +110,7 @@ class OrderEventPublishingIT extends ContainersSupport {
         String drug = new TestStock(jdbc).newDrug(false, 1);
 
         mvc.perform(post("/orders").contentType(MediaType.APPLICATION_JSON)
+                        .with(nurse())
                         .content("""
                                 {"patientRef":"P-0100","drugCode":"%s","qty":3,"ward":"ER"}
                                 """.formatted(drug)))

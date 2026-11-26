@@ -57,6 +57,22 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- I2: JWT resource server from commons/sec (validates identity's RS256 tokens, roles -> ROLE_*) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security-oauth2-resource-server</artifactId>
+        </dependency>
+        <!-- I2: TestJwt / TestJwtConfiguration: sign test tokens without identity-service -->
+        <dependency>
+            <groupId>tn.rnu.eniso.doserunner</groupId>
+            <artifactId>test-support</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>

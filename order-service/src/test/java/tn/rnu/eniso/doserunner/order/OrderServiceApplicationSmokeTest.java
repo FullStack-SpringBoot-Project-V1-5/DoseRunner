@@ -3,6 +3,7 @@ package tn.rnu.eniso.doserunner.order;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
+import tn.rnu.eniso.doserunner.testsupport.TestJwt;
 import tn.rnu.eniso.doserunner.order.support.ContainersSupport;
 
 import java.net.URI;
@@ -31,11 +32,12 @@ class OrderServiceApplicationSmokeTest extends ContainersSupport {
     }
 
     @Test
-    void unknownPathGives404WithTraceIdInBody() throws Exception {
+    void unknownPathWithATokenGives404WithTraceIdInBody() throws Exception {
         HttpResponse<String> res;
         try (HttpClient client = HttpClient.newHttpClient()) {
             res = client.send(HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/does-not-exist"))
-                    .header("x-request-id", "smoke-test-2").build(), HttpResponse.BodyHandlers.ofString());
+                    .header("x-request-id", "smoke-test-2")
+                    .header("Authorization", TestJwt.bearer("NURSE")).build(), HttpResponse.BodyHandlers.ofString());
         }
         assertThat(res.statusCode()).isEqualTo(404);
         assertThat(res.body()).contains("\"traceId\":\"smoke-test-2\"");

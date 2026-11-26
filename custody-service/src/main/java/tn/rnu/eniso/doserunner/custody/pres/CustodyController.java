@@ -1,6 +1,7 @@
 package tn.rnu.eniso.doserunner.custody.pres;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,7 +16,7 @@ import java.util.Map;
 
 /**
  * Read-only ledger API (README, custody-service). There is deliberately no write endpoint: links are created only
- * from Artemis events (ADR 0001 #12). Roles (AUDITOR, PHARMACIST) are enforced once commons/sec exists.
+ * from Artemis events (ADR 0001 #12). Roles follow the README table and are checked on the JWT from identity-service (commons/sec).
  */
 @RestController
 @RequestMapping("/custody")
@@ -28,6 +29,7 @@ public class CustodyController {
     }
 
     @GetMapping("/orders/{orderId}")
+    @PreAuthorize("hasAnyRole('AUDITOR', 'PHARMACIST')")
     public List<CustodyLinkView> chain(@PathVariable String orderId) {
         List<CustodyLinkView> chain = facade.chain(orderId);
         if (chain.isEmpty()) {
@@ -37,6 +39,7 @@ public class CustodyController {
     }
 
     @GetMapping("/orders/{orderId}/verify")
+    @PreAuthorize("hasRole('AUDITOR')")
     public VerificationReport verify(@PathVariable String orderId) {
         VerificationReport report = facade.verify(orderId);
         if (report.links() == 0) {
@@ -46,6 +49,7 @@ public class CustodyController {
     }
 
     @GetMapping("/public-key")
+    @PreAuthorize("hasRole('AUDITOR')")
     public Map<String, String> publicKey() {
         return Map.of("algorithm", "Ed25519", "publicKey", facade.publicKeyBase64());
     }

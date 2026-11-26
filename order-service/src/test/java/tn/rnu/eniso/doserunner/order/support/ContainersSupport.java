@@ -1,9 +1,13 @@
 package tn.rnu.eniso.doserunner.order.support;
 
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.context.annotation.Import;
 import org.testcontainers.activemq.ArtemisContainer;
 import org.testcontainers.postgresql.PostgreSQLContainer;
+import tn.rnu.eniso.doserunner.testsupport.TestJwtConfiguration;
 
+/** Shared containers + the test JWT decoder (tokens from {@code TestJwt} / {@link AuthTokens} are accepted). */
+@Import(TestJwtConfiguration.class)
 public abstract class ContainersSupport {
 
     @ServiceConnection

@@ -16,6 +16,13 @@ spring:
 server:
   port: ${SERVER_PORT:8084}
 
+doserunner:
+  # I2: JWT resource server (commons/sec). Compose sets DOSERUNNER_SECURITY_JWKSURI to identity-service.
+  security:
+    jwks-uri: http://localhost:8081/.well-known/jwks.json
+    public-paths:
+      - /ui/**          # audit page stays open until the UI gets its own login (team decision pending)
+
 custody:
   signing:
     key-file: ${CUSTODY_SIGNING_KEY_FILE:secrets/custody-ed25519.sk}
