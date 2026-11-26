@@ -1,5 +1,6 @@
 # DoseRunner — local dev stack (no Kubernetes, no Istio: those arrive in week 3).
 #
+#   sh deploy/compose/gen-jwt-key.sh      (once: JWT signing key for identity-service, gitignored)
 #   docker compose -f deploy/compose/docker-compose.yml up --build
 #
 # Credentials below are DEV DEFAULTS. Override them through environment variables / a local .env (gitignored).
@@ -12,6 +13,8 @@ x-service-env: &service-env
   SPRING_ARTEMIS_BROKER_URL: tcp://artemis:61616
   SPRING_ARTEMIS_USER: ${ARTEMIS_USER:-artemis}
   SPRING_ARTEMIS_PASSWORD: ${ARTEMIS_PASSWORD:-artemis}
+  # commons/sec: where resource servers fetch identity's public key (active once a service adds the security starter)
+  DOSERUNNER_SECURITY_JWKSURI: http://identity-service:8081/.well-known/jwks.json
 
 x-service: &service
   restart: unless-stopped
@@ -74,6 +77,8 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/identity
       SPRING_DATASOURCE_USERNAME: identity
       SPRING_DATASOURCE_PASSWORD: ${IDENTITY_DB_PASSWORD:-identity}
+      DOSERUNNER_JWT_PRIVATEKEYLOCATION: file:/run/secrets/jwt-private-key
+    secrets: [jwt-private-key]
     ports: ["8081:8081"]
 
   order-service:
@@ -131,6 +136,10 @@ services:
       SIM_PHARMACY_X: ${DISPATCH_PHARMACY_X:-0}
       SIM_PHARMACY_Y: ${DISPATCH_PHARMACY_Y:-0}
     ports: ["8085:8085"]
+
+secrets:
+  jwt-private-key:
+    file: ./secrets/jwt-private.pem   # sh deploy/compose/gen-jwt-key.sh
 
 volumes:
   pgdata:

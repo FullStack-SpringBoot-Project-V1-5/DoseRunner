@@ -11,6 +11,7 @@ Programming Frameworks project (IA3) · Spring Boot 4.1 · Java 25 · Istio · A
 |------------------------|-------|----------------------------------------------------------------------|------|
 | `contracts`            | B     | Avro schemas + gRPC descriptors (frozen, change = PR approved by 4)  | —    |
 | `commons`              | joint | Pyramid transversal layer: dto, sec, trace, util, `logback-spring.xml` | —    |
+| `test-support`         | joint | `TestJwt`: sign test tokens, test 401/403 without identity (test scope) | —    |
 | `commons-native`       | D     | FFM bindings: libsodium, libroute                                    | —    |
 | `identity-service`     | A     | users, roles, JWT RS256 + JWKS                                       | 8081 |
 | `order-service`        | B     | orders, validation, stock, formulary, saga state                     | 8082 |
@@ -35,6 +36,7 @@ Every service follows the same Pyramid: `pres/ → facade/ → bo/ → dao/` (+ 
 
 ## Run the local stack
 ```bash
+sh deploy/compose/gen-jwt-key.sh          # once: identity-service signing key (gitignored, never commit it)
 docker compose -f deploy/compose/docker-compose.yml up --build -d
 curl http://localhost:8082/actuator/health      # {"status":"UP",...}
 docker compose -f deploy/compose/docker-compose.yml logs -f order-service   # JSON logs with traceId
@@ -52,6 +54,26 @@ Dev credentials are defaults only; override them with env vars or a local `.env`
   echoed in the `x-request-id` response header.
 - Logs: readable text by default, JSON when the `prod` profile is active (compose sets it).
 - Errors: every REST error is an `ApiError` JSON body carrying the `traceId`.
+
+## Security (from `commons/sec`, auto-configured)
+- **Opt in** by adding `spring-boot-starter-security-oauth2-resource-server` to your service POM. Compose already sets
+  `DOSERUNNER_SECURITY_JWKSURI`; for a local run set `doserunner.security.jwks-uri: http://localhost:8081/.well-known/jwks.json`.
+- You then get: RS256 validation against identity's JWKS + issuer check, `roles` claim → `ROLE_*`
+  (`@PreAuthorize("hasRole('NURSE')")` works, method security is already on), a stateless chain, and 401/403 as `ApiError`.
+- Public without a token: `/actuator/health/**`, `/actuator/info`, `/error`, `/.well-known/**`, plus your
+  `doserunner.security.public-paths`.
+- **Tests:** add `test-support` (scope `test`), `@Import(TestJwtConfiguration.class)`, then
+  `.header("Authorization", TestJwt.bearer("NURSE"))`. Also `TestJwt.expired(...)`. No identity-service needed.
+- **Rate limit** (every service, no opt-in needed): a token bucket per user (JWT `sub`) or per IP when anonymous.
+  The default is 200 burst + 200/min. Over the limit you get **429** + `Retry-After` + `ApiError`. Configure it with
+  `doserunner.ratelimit.{capacity,refill-per-minute,enabled}`.
+
+### Dev users (seeded by identity-service Flyway `V2`, dev only)
+`nurse`, `pharmacist`, `operator`, `auditor`, `admin`: one role each (the name says which). Password for all of them: `DoseRunner-2026`.
+```bash
+curl -s -X POST localhost:8081/auth/login -H 'Content-Type: application/json' \
+     -d '{"username":"nurse","password":"DoseRunner-2026"}'     # → {"accessToken":"…","tokenType":"Bearer","expiresIn":900}
+```
 
 ## REST endpoints (frozen at `v0.1-contracts`)
 
@@ -112,7 +134,7 @@ Order status: `PLACED → VALIDATED → ASSIGNED → PICKED_UP → COMPLETED`, p
 There is **no write endpoint**: ledger links are created only from Artemis events (ADR 0001 §12).
 
 ### MVC pages (Thymeleaf)
-`/login`, `/admin/users` (identity) · `/ui/orders/new`, `/ui/orders/{id}`, `/ui/pharmacy/queue` (order) ·
+`/login`, `/ui/admin/users` (identity) · `/ui/orders/new`, `/ui/orders/{id}`, `/ui/pharmacy/queue` (order) ·
 `/ui/fleet` (dispatch) · `/ui/audit/{orderId}` (custody).
 
 ## Messaging
