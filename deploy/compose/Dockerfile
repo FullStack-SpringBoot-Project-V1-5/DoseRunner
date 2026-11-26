@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # One Dockerfile for every Spring Boot module:  docker build --build-arg MODULE=order-service -f deploy/compose/Dockerfile .
-# (custody/dispatch get their own image later: they need libsodium23 + libroute.so for FFM.)
+# Services that call native code (custody now, dispatch once it uses libroute) use ./Dockerfile.native instead.
 
 FROM maven:3.9.16-eclipse-temurin-25 AS build
 WORKDIR /src

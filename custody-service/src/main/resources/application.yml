@@ -1,9 +1,25 @@
 spring:
   application:
     name: custody-service
+  # Dev defaults (compose overrides them with SPRING_DATASOURCE_*).
+  datasource:
+    url: jdbc:postgresql://localhost:5432/custody
+    username: custody
+    password: custody
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate        # Flyway owns the schema; Hibernate only checks the entity matches it
+  flyway:
+    locations: classpath:db/migration
 
 server:
   port: ${SERVER_PORT:8084}
+
+custody:
+  signing:
+    key-file: ${CUSTODY_SIGNING_KEY_FILE:secrets/custody-ed25519.sk}
+    generate-if-missing: true
 
 management:
   endpoints:
