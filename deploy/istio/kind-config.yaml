@@ -1,0 +1,8 @@
+# kind cluster for DoseRunner + Istio (week 1: Bookinfo try-out, week 3: the real services).
+#   kind create cluster --config deploy/istio/kind-config.yaml
+# One control-plane node is enough for the demo profile; add a worker if you want to see cross-node mTLS in Kiali.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: doserunner
+nodes:
+  - role: control-plane

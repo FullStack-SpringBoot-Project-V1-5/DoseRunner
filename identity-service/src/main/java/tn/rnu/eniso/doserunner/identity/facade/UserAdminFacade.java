@@ -10,9 +10,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import tn.rnu.eniso.doserunner.identity.bo.CredentialPolicy;
 import tn.rnu.eniso.doserunner.identity.dao.AppUser;
+import tn.rnu.eniso.doserunner.identity.dao.Role;
 import tn.rnu.eniso.doserunner.identity.dao.UserRepository;
 import tn.rnu.eniso.doserunner.identity.facade.dto.UserView;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,6 +32,11 @@ public class UserAdminFacade {
         this.users = users;
         this.passwordEncoder = passwordEncoder;
         this.policy = policy;
+    }
+
+    /** Role names a user can be given, in declaration order (for the admin page checkboxes). */
+    public List<String> availableRoles() {
+        return Arrays.stream(Role.values()).map(Role::name).toList();
     }
 
     @Transactional(readOnly = true)
