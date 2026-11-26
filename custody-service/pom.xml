@@ -13,6 +13,11 @@
     <name>DoseRunner :: custody-service</name>
     <description>Signed, hash-chained custody ledger + /verify (owner: D (FFM))</description>
 
+    <properties>
+        <!-- Ed25519/BLAKE2b go through libsodium via FFM (commons-native). -->
+        <argLine>--enable-native-access=ALL-UNNAMED</argLine>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>tn.rnu.eniso.doserunner</groupId>
@@ -23,13 +28,48 @@
             <artifactId>contracts</artifactId>
         </dependency>
         <dependency>
+            <groupId>tn.rnu.eniso.doserunner</groupId>
+            <artifactId>commons-native</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-thymeleaf</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
         </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-postgresql</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

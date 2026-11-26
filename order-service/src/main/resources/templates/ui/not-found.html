@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{ui/fragments :: head('Not found')}"></head>
+<body>
+<header th:replace="~{ui/fragments :: nav}"></header>
+<main>
+    <h1>Not found</h1>
+    <p th:text="${message}">The order does not exist.</p>
+</main>
+</body>
+</html>
