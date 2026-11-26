@@ -1,7 +1,17 @@
 # Contributing to DoseRunner
 
 ## Branches
-`main` is protected: PR mandatory, **1 approval from someone other than the author**, CI green. No direct push.
+| Branch    | Role                                                                                   |
+|-----------|----------------------------------------------------------------------------------------|
+| `develop` | integration branch: **every feature PR targets `develop`**                             |
+| `main`    | demo-ready only: updated by a `develop` → `main` PR at each checkpoint (end of week, demo) |
+
+Both are protected: PR mandatory, **1 approval from someone other than the author**, CI green. No direct push.
+
+- Start new work from `develop`: `git fetch origin && git switch -c avro/my-feature origin/develop`.
+- Keep your branch current with `git merge origin/develop` (not rebase once it is pushed).
+- Merge PRs with a **merge commit**, not squash (PRs are often stacked on each other).
+- Tags: contract freezes (`v0.1-contracts`) on `develop`; release tags (`v1.0`) on `main`.
 
 | Prefix      | Owner            |
 |-------------|------------------|
